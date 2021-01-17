@@ -1,0 +1,756 @@
+#include <iostream>
+#include <queue>
+#include <stack>
+#include <cmath>
+#include <webots/Robot.hpp>
+#include <webots/Motor.hpp>
+#include <webots/PositionSensor.hpp>
+#include <webots/Camera.hpp>
+#include <webots/DistanceSensor.hpp>
+#include <webots/Gyro.hpp>
+#include <webots/GPS.hpp>
+#include <webots/LightSensor.hpp>
+#include <webots/Emitter.hpp>
+
+using namespace std;
+using namespace webots;
+
+//stuff
+Robot* robot = new Robot();
+Motor* leftMotor = robot->getMotor("left wheel motor");
+Motor* rightMotor = robot->getMotor("right wheel motor");
+PositionSensor* leftEncoders = leftMotor->getPositionSensor();
+PositionSensor* rightEncoders = rightMotor->getPositionSensor();
+DistanceSensor* infrared[8];
+Camera* colorCam = robot->getCamera("colour_sensor");
+Gyro* gyro = robot->getGyro("gyro");
+LightSensor* leftHeat = robot->getLightSensor("left_heat_sensor");
+LightSensor* rightHeat = robot->getLightSensor("right_heat_sensor");
+Emitter* emitter = robot->getEmitter("emitter");
+//unused (for now)
+GPS* gps = robot->getGPS("gps");
+
+double angle = 0.00; 
+
+void updateGyro(int timeStep) {
+    angle -= (timeStep/ 1000.0) * (gyro->getValues())[0];
+    angle = fmod((angle + 6.283), 6.283);
+} 
+
+double getAngle() {
+    return angle * 180.0 / 3.1415;
+}
+
+int roundAngle(int i){
+    int bob = (i + 360) % 360;
+    if (bob > 315 || bob <= 45) return 0;
+    if (bob > 45 && bob <= 135) return 90;
+    if (bob > 135 && bob <= 225) return 180;
+    if (bob > 225 && bob <= 315) return 270; 
+    return -1;
+}
+
+int compassDirection(){
+  return roundAngle(getAngle()) / 90;
+}
+
+struct Tile {
+    bool open[4];
+    bool visited;
+    bool hasVictim;
+};
+
+const int boardSize = 25;
+Tile board[boardSize][boardSize];
+pair<int, int> loc{ 12, 12 };
+int direction = 0; //0 is up, 1 is right, 2 is down, 3 is left
+pair<int, int> startingCoord = loc;
+pair<double, double> startingGPS;
+
+pair<double, double> moveStart;
+
+void printBoard() {
+    for (int i = boardSize-1; i >= 0; i--) {
+        for (int j = 0; j < boardSize; j++) {
+            if (!board[j][i].open[2]) cout << "_";
+            else cout << " ";
+            if (!board[j][i].open[1]) cout << "|";
+            else cout << " ";
+        }
+        cout << endl;
+    }
+    cout << "Printing complete!" << endl;
+}
+
+pair<int, int> neighborTile(pair<int, int> tile, int dir) {
+    if (dir == 0) return make_pair(tile.first, tile.second + 1);
+    if (dir == 1) return make_pair(tile.first + 1, tile.second);
+    if (dir == 2) return make_pair(tile.first, tile.second - 1);
+    if (dir == 3) return make_pair(tile.first - 1, tile.second);
+    return make_pair(-1, -1);
+}
+
+int getDirection(pair<int, int> first, pair<int, int> second) {
+    for (int i = 0; i < 4; i++) {
+        if (neighborTile(first, i) == second) return i;
+    }
+    if (first == second) return 10;
+    return -1;
+}
+
+bool goClockwise(int startDirection, int endDirection){
+    if (endDirection - startDirection == -1 || endDirection - startDirection == 3) {
+        return false;
+    }
+    return true;
+}
+
+const double coordToGPS = 0.12;
+pair<int, int> getCoords() {
+    pair<double, double> diff;
+    pair<int, int> newCoords = startingCoord;
+    //cout << "Starting: " << newCoords.first << " " << newCoords.second << endl;
+    //cout << gps->getValues()[0] << " " << gps->getValues()[2] << endl;
+    diff.first = gps->getValues()[0] - startingGPS.first;
+    diff.second = gps->getValues()[2] - startingGPS.second;
+    //cout << "Diff: " << diff.first << " " << diff.second << endl;
+    newCoords.first += round(diff.first / coordToGPS);
+    newCoords.second -= round(diff.second / coordToGPS);
+    
+    //cout << "Returning: " << newCoords.first << " " << newCoords.second << endl;
+    return newCoords;
+}
+
+double getDeltaTarget(pair<int, int> targetCoordinates){
+    pair<double, double> targetGPS;
+    targetGPS.first = startingGPS.first + (targetCoordinates.first - startingCoord.first) * coordToGPS;
+    targetGPS.second = startingGPS.second - (targetCoordinates.second - startingCoord.second) * coordToGPS;
+    //cout << targetGPS.first << " " << targetGPS.second<< endl;
+    //cout << fabs(targetGPS.first - gps->getValues()[0]) << " " << fabs(targetGPS.second - gps->getValues()[2]) << endl;
+    return max(fabs(targetGPS.first - gps->getValues()[0]), fabs(targetGPS.second - gps->getValues()[2]));
+    
+}
+
+double getDelta(){
+  //cout << moveStart.first - gps->getValues()[0] << endl;
+  
+  return max(fabs(moveStart.first - gps->getValues()[0]), fabs(moveStart.second - gps->getValues()[2]));
+}
+
+queue<pair<int, int>> bfsQueue;
+pair<int, int> boardParents[boardSize][boardSize];
+bool traveled[boardSize][boardSize];
+
+pair<int, int> bfs(pair<int, int> node) {
+    //cout << "Searching node: " << node.first << " " << node.second << endl;
+    if (!board[node.first][node.second].visited) {
+        return node;
+    }
+    if (traveled[node.first][node.second]) return make_pair(-1, -1);
+    traveled[node.first][node.second] = true;
+
+    for (int i = 0; i < 4; i++) {
+        if (board[node.first][node.second].open[i]) {
+            pair<int, int> neighbor = neighborTile(node, i);
+            //cout << "Looking at node : " << neighbor.first << " " << neighbor.second << endl;
+            if (!traveled[neighbor.first][neighbor.second]) {
+                bfsQueue.push(neighbor);
+                boardParents[neighbor.first][neighbor.second] = node;
+            }
+        }
+    }
+
+    return make_pair(-1, -1);
+}
+
+pair<int, int> runBFS(pair<int, int> startNode) {
+    while (!bfsQueue.empty()) bfsQueue.pop();
+    for (int i = 0; i < boardSize; i++) {
+        for (int j = 0; j < boardSize; j++) {
+            boardParents[i][j] = make_pair(-1, -1);
+            traveled[i][j] = false;
+        }
+    }
+    
+    bfs(startNode);
+
+    pair<int, int> inp;
+    pair<int, int> result = startNode;
+    while (!bfsQueue.empty()) {
+        inp = bfsQueue.front();
+        result = bfs(inp);
+        //cout << "BFS iteration return result: " << result.first << " " << result.second << endl;
+        if (result.first != -1) {
+            break;
+        }
+        bfsQueue.pop();
+    }
+    //cout << "BFS returned " << result.first << " " << result.second << endl;
+    return result;
+}
+
+double wallThreshold = 0.2;
+void scan(pair<int, int>& tile) {
+    //cout << "Scanning at node " << tile.first << " " << tile.second << endl;
+    board[tile.first][tile.second].visited = true;
+    if (infrared[0]->getValue() > wallThreshold) {
+        board[tile.first][tile.second].open[direction % 4] = true;
+        pair<int, int> neighbor = neighborTile(tile, direction % 4);
+        //cout << "Neighbor tile: " << neighbor.first << " " << neighbor.second << endl;
+        board[neighbor.first][neighbor.second].open[(direction + 2) % 4] = true;
+    }
+    //cout << infrared[2]->getValue() << " vs " << wallThreshold << endl;
+    if (infrared[2]->getValue() > wallThreshold) {
+        board[tile.first][ tile.second].open[(direction + 1) % 4] = true;
+        pair<int, int> neighbor = neighborTile(tile, (direction + 1) % 4);
+        //cout << "Neighbor tile: " << neighbor.first << " " << neighbor.second << endl;
+        board[neighbor.first][neighbor.second].open[(direction + 3) % 4] = true;
+    }
+    //cout << infrared[5]->getValue() << " vs " << wallThreshold << endl;
+    if (infrared[5]->getValue() > wallThreshold) {
+        board[tile.first][tile.second].open[(direction + 3) % 4] = true;
+        pair<int, int> neighbor = neighborTile(tile, (direction + 3) % 4);
+        //cout << "Neighbor tile: " << neighbor.first << " " << neighbor.second << endl;
+        board[neighbor.first][neighbor.second].open[(direction + 1) % 4] = true;
+    }
+}
+
+void doOffset(int& posX, int& posZ, bool leftSide) {
+    int currentDir = compassDirection();
+
+
+    if (currentDir == 0) PosZ -= 2;
+    if (currentDir == 1) PosX += 2;
+    if (currentDir == 2) PosZ += 2;
+    if (currentDir == 3) PosX -= 2;
+
+    if (leftSide) {
+        if (currentDir == 0) PosX -= (100 * coordToGPS) / 2;
+        if (currentDir == 1) PosZ -= (100 * coordToGPS) / 2;
+        if (currentDir == 2) PosX += (100 * coordToGPS) / 2;
+        if (currentDir == 3) PosZ += (100 * coordToGPS) / 2;
+    }
+
+    else {
+        if (currentDir == 0) PosX += (100 * coordToGPS) / 2;
+        if (currentDir == 1) PosZ += (100 * coordToGPS) / 2;
+        if (currentDir == 2) PosX -= (100 * coordToGPS) / 2;
+        if (currentDir == 3) PosZ -= (100 * coordToGPS) / 2;
+    }
+
+
+}
+
+const int robotID = 1;
+const int heatThreshold = 35;
+bool checkHeatVictim(char (&mess)[9]) {
+    pair<int, int> currentCoords = getCoords();
+    if ((!board[currentCoords.first][currentCoords.second].hasVictim) &&(leftHeat->getValue() > heatThreshold || rightHeat->getValue() > heatThreshold)) {
+        int PosX = gps->getValues()[0] * 100;
+        int PosZ = gps->getValues()[2] * 100;
+        
+        //cout << "Heat Victim at " << PosX << " " << PosZ << endl;
+        
+        doOffset(PosX, PosZ, leftHeat->getValue() > heatThreshold);
+        
+        //memcpy(&mess[0], &robotID, 4);
+        memcpy(&mess[0], &PosX, 4);
+        memcpy(&mess[4], &PosZ, 4);
+
+        mess[8] = 't'; //mess[9] = 'e'; mess[10] = 'a'; mess[11] = 't';
+        cout << "Heat Victim at GPS Values: " << PosX << " " << PosZ << endl;
+        //board[currentCoords.first][currentCoords.second].hasVictim = true;
+        return true;
+    }
+    return false;
+}
+
+Mat src_gray;
+int thresh = 170;
+const int max_thresh = 255;
+RNG rng(12345);
+
+//blur
+int DELAY_CAPTION = 1500;
+int DELAY_BLUR = 100;
+int MAX_KERNEL_LENGTH = 31;
+char window_name[] = "Smoothing Demo";
+int display_caption(const char* caption);
+int display_dst(int delay);
+
+bool checkRightVisualVictim(char(&mess)[9]) {
+    Mat src(camR->getHeight(), camR->getWidth(), CV_8UC4, (void*)camR->getImage());;
+
+    if (src.empty())
+    {
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
+        return false;
+    }
+    Mat drawing = src.clone();
+    cvtColor(src, src, COLOR_BGR2GRAY); //grayscale
+
+    blur(src, src, Size(3, 3));
+    threshold(src, src, thresh, max_thresh, THRESH_BINARY); //threshold
+    imshow("thresh", src);
+    Mat canny_output;
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    imshow("Contours", drawing);
+
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        Scalar color = Scalar(0, 0, 255);
+        drawContours(drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0);
+        Rect roi = boundingRect(contours[i]);
+
+        int width = roi.width;
+        int height = roi.height;
+        double area = width * height / 3;
+        if (roi.width < 55 && roi.width > 35 && roi.height < 55 && roi.height > 35 && roi.width / roi.height < 1.1 && roi.width / roi.height > 0.8)
+        {
+            rectangle(src, roi, color, 1);
+            Mat crop = src(roi);
+            imshow("crop", crop);
+            Rect slicet(roi.x, roi.y, roi.width, roi.height / 3);
+            Mat slice1 = src(slicet);
+            imshow("slice1", slice1);
+            Rect slicem(roi.x, roi.y + (roi.height / 3), roi.width, roi.height / 3);
+            Mat slice2 = src(slicem);
+            imshow("slice2", slice2);
+            Rect sliceb(roi.x, roi.y + (roi.height * 2 / 3), roi.width, roi.height / 3);
+            Mat slice3 = src(sliceb);
+            imshow("slice3", slice3);
+            Vec3b t;
+            Vec3b m;
+            Vec3b b;
+
+            top = mid = bottom = 0;
+            cout << "Visual victim, right side." << endl;
+            for (int y = 0; y < roi.height; y++)
+            {
+                if (y < roi.height / 3) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        t = crop.at<Vec3b>(Point(x, y));
+                        if (t.val[0] < 200)
+                            top += (1 / area);
+                    }
+                }
+                else if (y < roi.height * 2 / 3) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        m = crop.at<Vec3b>(Point(x, y));
+                        if (m.val[0] < 200)
+                            mid += (1 / area);
+                    }
+                }
+                else if (y < roi.height) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        b = crop.at<Vec3b>(Point(x, y));
+                        if (b.val[0] < 200)
+                            bottom += (1 / area);
+                    }
+                    printf("%d\n", y);
+                }
+            }
+            printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
+
+            PosX = gps->getValues()[0] * 100;
+            PosZ = gps->getValues()[2] * 100;
+            doOffset(PosX, PosZ, false);
+            if (bottom - top >= 0.04 && bottom - mid >= 0.04) {//If bottom is darker than top and mid
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'U';
+                cout << "U victim\n" << endl;
+            }
+            else if (mid - top >= 0.04 && mid - bottom >= 0.04) {//If mid is darker than top and bottom
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'H';
+                cout << "H victim\n" << endl;
+            }
+            else {
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'S';
+                cout << "S victim\n" << endl;
+            }
+
+            time = 0;
+        }
+    }
+    waitKey(1);
+}
+
+bool checkLeftVisualVictim(char(&mess)[9]) {
+    Mat src(camL->getHeight(), camL->getWidth(), CV_8UC4, (void*)camL->getImage());;
+
+    if (src.empty())
+    {
+        cout << "Could not open or find the image!\n" << endl;
+        cout << "Usage: " << argv[0] << " <Input image>" << endl;
+        return false;
+    }
+    Mat drawing = src.clone();
+    cvtColor(src, src, COLOR_BGR2GRAY); //grayscale
+
+    blur(src, src, Size(3, 3));
+    threshold(src, src, thresh, max_thresh, THRESH_BINARY); //threshold
+    imshow("thresh", src);
+    Mat canny_output;
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    imshow("Contours", drawing);
+
+    for (size_t i = 0; i < contours.size(); i++)
+    {
+        Scalar color = Scalar(0, 0, 255);
+        drawContours(drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0);
+        Rect roi = boundingRect(contours[i]);
+
+        int width = roi.width;
+        int height = roi.height;
+        double area = width * height / 3;
+        if (roi.width < 55 && roi.width > 35 && roi.height < 55 && roi.height > 35 && roi.width / roi.height < 1.1 && roi.width / roi.height > 0.8)
+        {
+            rectangle(src, roi, color, 1);
+            Mat crop = src(roi);
+            imshow("crop", crop);
+            Rect slicet(roi.x, roi.y, roi.width, roi.height / 3);
+            Mat slice1 = src(slicet);
+            imshow("slice1", slice1);
+            Rect slicem(roi.x, roi.y + (roi.height / 3), roi.width, roi.height / 3);
+            Mat slice2 = src(slicem);
+            imshow("slice2", slice2);
+            Rect sliceb(roi.x, roi.y + (roi.height * 2 / 3), roi.width, roi.height / 3);
+            Mat slice3 = src(sliceb);
+            imshow("slice3", slice3);
+            Vec3b t;
+            Vec3b m;
+            Vec3b b;
+
+            top = mid = bottom = 0;
+            cout << "Visual victim, left side." << endl;
+            for (int y = 0; y < roi.height; y++)
+            {
+                if (y < roi.height / 3) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        t = crop.at<Vec3b>(Point(x, y));
+                        if (t.val[0] < 200)
+                            top += (1 / area);
+                    }
+                }
+                else if (y < roi.height * 2 / 3) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        m = crop.at<Vec3b>(Point(x, y));
+                        if (m.val[0] < 200)
+                            mid += (1 / area);
+                    }
+                }
+                else if (y < roi.height) {
+                    for (int x = 0; x < roi.width; x++)
+                    {
+                        b = crop.at<Vec3b>(Point(x, y));
+                        if (b.val[0] < 200)
+                            bottom += (1 / area);
+                    }
+                    printf("%d\n", y);
+                }
+            }
+            printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
+
+            PosX = gps->getValues()[0] * 100;
+            PosZ = gps->getValues()[2] * 100;
+            doOffset(PosX, PosZ, true);
+            if (bottom - top >= 0.04 && bottom - mid >= 0.04) {//If bottom is darker than top and mid
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'U';
+                cout << "U victim\n" << endl;
+            }
+            else if (mid - top >= 0.04 && mid - bottom >= 0.04) {//If mid is darker than top and bottom
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'H';
+                cout << "H victim\n" << endl;
+            }
+            else {
+                memcpy(&message[0], &PosX, 4);
+                memcpy(&message[4], &PosZ, 4);
+
+                message[8] = 'S';
+                cout << "S victim\n" << endl;
+            }
+
+            time = 0;
+        }
+    }
+    waitKey(1);
+}
+
+bool checkHole(){
+    const unsigned char* img = colorCam->getImage();
+    if (img[1] < 65){ //johnathan hardcoded it it must be right
+        return true;
+    }
+    return false;
+}
+
+int init() {
+    int timeStep = (int)robot->getBasicTimeStep();
+
+    for (int i = 0; i < 8; i++) {
+        infrared[i] = robot->getDistanceSensor("ps" + to_string(i));
+        infrared[i]->enable(timeStep);
+    }
+    leftEncoders->enable(timeStep);
+    rightEncoders->enable(timeStep);
+
+    gyro->enable(timeStep);
+    gps->enable(timeStep);
+    leftHeat->enable(timeStep);
+    rightHeat->enable(timeStep);
+    colorCam ->enable(timeStep);
+    
+    leftMotor->setPosition(INFINITY);
+    rightMotor->setPosition(INFINITY);
+
+    leftMotor->setVelocity(0);
+    rightMotor->setVelocity(0);
+
+    return timeStep;
+}
+
+int main(int argc, char** argv) {
+    int timeStep = init();
+    for (int i = 0; i < 10; i++) robot->step(timeStep);
+    
+    
+    
+    //board[loc.first][loc.second+2].visited = true;
+    //board[loc.first-1][loc.second].visited = true;
+    //board[loc.first+1][loc.second].visited = true;
+    //board[loc.first+1][loc.second+1].visited = true;
+    
+    //states
+    bool turning = false;
+    bool advancing = false;
+    bool stopping = false;
+    bool reversing = false;
+    bool ending = false;
+    bool skipTurn = false;
+    
+    //constants
+    double motorSpeed = 3.0;
+    double stoppingConst = 250.0;
+
+    //movement variables
+    double turnTarget = 0.0;
+    double targetAngle = 0.0;
+    double forwardTarget = 0.0;
+    double startOfMoveGPS = 0.0;
+
+    //other stuff
+    pair<double, double> motorPrevious;
+    pair<int, int> targetTile;
+
+    char message[9] = "";
+
+    int timer = 0;
+
+    stack<pair<int, int>> steps;
+    
+    startingGPS.first = gps->getValues()[0];
+    startingGPS.second = gps->getValues()[2];
+    cout << "Starting GPS values: " << startingGPS.first << " " << startingGPS.second << endl;
+
+    //board[4][1].visited = true;
+    //board[2][0].visited = true;
+
+    //cout << "Still doing ok!" << endl;
+    angle = 0;
+     
+    while (robot->step(timeStep) != -1) {
+        //cout << "Random GPS values: " << gps->getValues()[0] << " " << gps->getValues()[2] << endl;
+        updateGyro(timeStep);
+        //cout << "Angular velocity: " << gyro->getValues()[0] << " Angle heading: " << getAngle() << endl;
+        if (stopping) {
+            //blink
+            if (timer == stoppingConst){
+                cout << "Sending message" << endl;
+                emitter->send(message, 9);
+            }
+            if (timer >= stoppingConst + 30) {
+                timer = 0;
+                rightMotor->setVelocity(motorPrevious.first);
+                leftMotor->setVelocity(motorPrevious.second);
+                stopping = false;
+            }
+            timer++;
+        }
+        else if (reversing){
+            if (direction == 0 || direction == 2){
+                if (fabs(gps->getValues()[2] - startOfMoveGPS) < .01) reversing = false;
+                 
+            }
+            if (direction == 1 || direction == 3){
+                if (fabs(gps->getValues()[0] - startOfMoveGPS) < .01) reversing = false;
+            }
+        }
+        else if (turning) {
+            if (fabs(getAngle() - turnTarget) < 5.0 || fabs(getAngle() - turnTarget + 360) < 1.0 || skipTurn) {
+                //timer = 0;
+                moveStart = make_pair(gps->getValues()[0], gps->getValues()[2]);
+                skipTurn = false;
+                turning = false;
+                leftMotor->setVelocity(min(leftMotor->getMaxVelocity(), motorSpeed));
+                rightMotor->setVelocity(min(leftMotor->getMaxVelocity(),motorSpeed));
+                targetAngle = roundAngle(getAngle());
+                if (direction == 0 || direction == 2) startOfMoveGPS = gps->getValues()[2];
+                else startOfMoveGPS = gps->getValues()[0];
+                //cout << "Target = " << targetAngle << endl;
+                //cout << "Turned!" << endl;
+              }
+            else {
+                //timer++;
+                if (checkHeatVictim(message) || checkRightVisualVictim(message) || checkLeftVisualVictim(message)) {
+                    timer = 0;
+                    motorPrevious = make_pair(rightMotor->getVelocity(), leftMotor->getVelocity());
+                    leftMotor->setVelocity(0);
+                    rightMotor->setVelocity(0);
+                    stopping = true;
+                }
+                
+            }
+            //cout << "Turning angle: " << getAngle() << " Target: "  << turnTarget << endl;
+        }
+        else if (advancing) {
+            //cout << "Delta: " << getDelta() << endl;
+            if (getDelta() >= forwardTarget || getDirection(loc, getCoords()) == -1) {
+                //cout << loc.first << " " << loc.second << " vs " << getCoords().first << " " << getCoords().second << endl;
+                //timer = 0.00;
+                advancing = false;
+                leftMotor->setVelocity(0);
+                rightMotor->setVelocity(0);
+                
+                loc = getCoords();
+                direction = compassDirection();  
+                //cout << "Advanced!" << endl;
+            }
+            else {
+                //cout << getDelta() << endl;
+                double pointingAt = fmod((360.0 + targetAngle - getAngle()), 360.0);
+                //cout << "Angle = " << pointingAt << endl;
+                if (pointingAt > .2  && pointingAt < 90.0){
+                    rightMotor->setVelocity(min(rightMotor->getMaxVelocity(), rightMotor->getVelocity() - .005));
+                    leftMotor->setVelocity(min(rightMotor->getMaxVelocity(), leftMotor->getVelocity() + .005));
+                }
+                if (pointingAt < 359.8  && pointingAt > 270.0){
+                    rightMotor->setVelocity(min(rightMotor->getMaxVelocity(), rightMotor->getVelocity() + .005));
+                    leftMotor->setVelocity(min(rightMotor->getMaxVelocity(), leftMotor->getVelocity() - .005));
+                }
+                //timer++;
+                if (checkHeatVictim(message)) {
+                    motorPrevious = make_pair(rightMotor->getVelocity(), leftMotor->getVelocity());
+                    leftMotor->setVelocity(0);
+                    rightMotor->setVelocity(0);
+                    stopping = true;
+                }
+                if (checkHole()){
+                    cout << "There's a hole!" << endl;
+                    reversing = true;
+                    advancing = false;
+                    rightMotor->setVelocity(-motorSpeed/2);
+                    leftMotor->setVelocity(-motorSpeed/2);
+                    board[targetTile.first][targetTile.second].visited = true;
+                }
+            }
+        }
+        else if (true){
+        //emitter->send(message, 9);
+            if (startingGPS.first < -200){
+                startingGPS.first = gps->getValues()[0];
+                startingGPS.second = gps->getValues()[2];
+            }
+            //cout << "Starting BFS" << endl;
+            
+            if (!board[loc.first][loc.second].visited){
+                scan(loc);
+                board[loc.first][loc.second].visited = true;
+            }
+            if (steps.empty()) {
+                if (!ending){
+                    pair<int, int> tempPair = runBFS(loc);
+                    //cout << "Finished BFS!" << endl;
+                    while (tempPair != loc && tempPair.first != -1) {
+                        steps.push(tempPair);
+                        tempPair = boardParents[tempPair.first][tempPair.second];
+                    }
+                    if (tempPair.first == -1){
+                        ending = true;
+                        board[startingCoord.first][startingCoord.second].visited = false;
+                        while (!steps.empty()) steps.pop();
+                        tempPair = runBFS(loc);
+                    
+                        while (tempPair != loc && tempPair.first != -1) {
+                            steps.push(tempPair);
+                            tempPair = boardParents[tempPair.first][tempPair.second];
+                        }
+                        cout << "Exiting maze..." << endl;
+                    }
+                }
+                else{
+                    message[8] = 'E';
+                    emitter->send(message, 9);
+                    break;
+                }
+            }
+            targetTile = steps.top();
+            //cout << "Traveling to " << targetTile.first << " " << targetTile.second << " Visited? " << board[targetTile.first][targetTile.second].visited << endl;
+            steps.pop();
+            int getDirVal = getDirection(loc, targetTile);
+            //cout << "Direction: " << getDirVal << endl;
+            int dirTarget = (4 + getDirVal) % 4;
+            turnTarget = dirTarget * 90;
+            if (dirTarget == direction) skipTurn = true; 
+            //cout << "Turn Target: " << turnTarget << endl;
+                
+            //printBoard();
+            //pair<int, int> gpsCoords = getCoords();
+            cout << "Coordinates: " << loc.first << " " << loc.second << endl;
+            //cout << "Crummy GPS Coords: " << gpsCoords.first << " " << gpsCoords.second << endl;
+            //cout << "X: " <<  gps->getValues()[0] << " Y: " << gps->getValues()[1] << " Z: " << gps->getValues()[2] << endl;
+                
+            forwardTarget = getDeltaTarget(targetTile);
+            //cout << "Angle: " << getAngle() << endl;
+            if (goClockwise(direction, dirTarget)) {
+                leftMotor->setVelocity(motorSpeed);
+                rightMotor->setVelocity(-motorSpeed);
+            }
+            else {
+                leftMotor->setVelocity(-motorSpeed);
+                rightMotor->setVelocity(motorSpeed);
+            }
+            direction = getDirVal;
+                
+                
+            //cout << "Started moving." << endl;
+            turning = advancing = true;
+        }
+    }
+
+    delete robot;
+    return 0;
+}   
