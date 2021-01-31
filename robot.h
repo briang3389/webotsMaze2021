@@ -15,6 +15,7 @@ GPS* gps = robot->getGPS("gps");
 Camera *camR = robot->getCamera("camera_right");
 Camera *camL = robot->getCamera("camera_left");
 Camera *camC = robot->getCamera("camera_centre");
+Receiver *rec=robot->getReceiver("receiver");
 
 int init() {
     int timeStep = (int)robot->getBasicTimeStep();
@@ -39,6 +40,8 @@ int init() {
 
     leftMotor->setVelocity(0);
     rightMotor->setVelocity(0);
+    
+    rec->enable(timeStep);
 
     
     for (int i = 0; i < 10; i++) robot->step(timeStep);
