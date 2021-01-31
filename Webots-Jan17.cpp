@@ -48,12 +48,26 @@ int main(int argc, char** argv) {
     startingGPS.second = gps->getValues()[2];
     cout << "Starting GPS values: " << startingGPS.first << " " << startingGPS.second << endl;
 
-    
+    int numLOP=0;
     angle = 0;
 
     while (robot->step(timeStep) != -1) {
         updateGyro(timeStep);
         
+        if(rec->getQueueLength()>0) //lack of progress just happened
+        {
+          char c=*(char*)rec->getData();
+          rec->nextPacket();
+          numLOP++;
+          printf("%c\t%d\n",c,numLOP);
+            
+            //reset state 
+            //change angle facing to north
+            //change position to last visited checkpoint (or start tile)
+            
+            
+          continue;
+        }
         
         if (stopping){
             if (timer == stoppingConst) {
