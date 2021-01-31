@@ -23,8 +23,8 @@ using namespace webots;
   Camera *camL = robot->getCamera("camera_left");
   GPS *gps = robot->getGPS("gps");
   Emitter *emitter = robot->getEmitter("emitter");
-  
-
+int PosX;
+int PosZ;
   
 int thresh = 165;
 const int max_thresh = 255;
@@ -92,7 +92,6 @@ bool checkVisualVictim(Camera* cam, char (&mess)[9])
         double top = 0;
         double mid = 0;
         double bottom = 0;
-        printf("letter\n");
         for(int y = 0; y < height; y++)
         {
           if(y<height/3){
@@ -122,18 +121,12 @@ bool checkVisualVictim(Camera* cam, char (&mess)[9])
         }
         printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
 
-        int PosX = gps->getValues()[0]*100;
-        int PosZ = gps->getValues()[2]*100;
-        if(top < 0.53 && mid < 0.55 && bottom < 0.6)//exclude noisy info
+        PosX = gps->getValues()[0]*100;
+        PosZ = gps->getValues()[2]*100;
+        if(top < 0.6 && mid < 0.7 && bottom < 0.6)//exclude noisy info
         {
-          if(bottom-top >= 0.04 && mid-top >= 0.015){//If bottom is darker than top and mid
-            memcpy(&mess[0], &PosX, 4);
-            memcpy(&mess[4], &PosZ, 4);
-            mess[8] = 'U';
-            printf("U victim\n");
-            return true;
-          }
-          else if(mid-top >= 0.04 && mid-bottom >= 0.04){//If mid is darker than top and bottom
+        
+          if(mid-top >= 0.06 && mid-bottom >= 0.06){//If mid is darker than top and bottom
             memcpy(&mess[0], &PosX, 4);
             memcpy(&mess[4], &PosZ, 4);
        
@@ -141,7 +134,15 @@ bool checkVisualVictim(Camera* cam, char (&mess)[9])
             printf("H victim\n");
             return true;
           }
-          else if(mid-top < 0.03 || bottom-mid < 0.03 && bottom - top < 0.04){
+          if(bottom-top >= 0.04 && mid-top >= 0.015){//If bottom is darker than top and mid
+            memcpy(&mess[0], &PosX, 4);
+            memcpy(&mess[4], &PosZ, 4);
+            mess[8] = 'U';
+            printf("U victim\n");
+            return true;
+          }
+
+          if(mid-top < 0.03 || bottom-mid < 0.03 && bottom - top < 0.04){
             memcpy(&mess[0], &PosX, 4);
             memcpy(&mess[4], &PosZ, 4);
      
