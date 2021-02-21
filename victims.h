@@ -58,137 +58,19 @@ char window_name[] = "Smoothing Demo";
 int display_caption(const char* caption);
 int display_dst(int delay);
 
-
-bool checkVisualVictim(int cameraNum = 0) {
-    //check for visual victim in the current tile
-    //camera 0 is center, 1 is left, 2 is right
-    //probably needs an update, not sure though
-    if (board[getCoords().first][getCoords().second].victimChecked) return false;
-
-    int PosX = gps->getValues()[0] * 100;
-    int PosZ = gps->getValues()[2] * 100;
-    
-    Camera *detectionCam = camC;
-    if (cameraNum == 1) detectionCam = camL;
-    if (cameraNum == 2) detectionCam = camR;
-    Mat src(detectionCam->getHeight(), detectionCam->getWidth(), CV_8UC4, (void*)detectionCam->getImage());;
-
-    if (src.empty())
-    {
-        cout << "Could not open or find the image!\n" << endl;
-        return false;
-    }
-    Mat drawing = src.clone();
-    cvtColor(src, src, COLOR_BGR2GRAY); //grayscale
-
-    blur(src, src, Size(3, 3));
-    threshold(src, src, thresh, max_thresh, THRESH_BINARY); //threshold
-    imshow("thresh", src);
-    Mat canny_output;
-    vector<vector<Point> > contours;
-    vector<Vec4i> hierarchy;
-    findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-    imshow("Contours", drawing);
-
-    for (size_t i = 0; i < contours.size(); i++)
-    {
-        Scalar color = Scalar(0, 0, 255);
-        drawContours(drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0);
-        Rect roi = boundingRect(contours[i]);
-
-        int width = roi.width;
-        int height = roi.height;
-        double area = width * height / 3;
-        if (roi.width < 130 && roi.width > 50 && roi.height < 130 && roi.height > 50 && roi.width / roi.height < 1.1 && roi.width / roi.height > 0.9)
-        {
-            cout << "Contour of ok size found" << endl;
-            rectangle(src,roi, color,1);
-            Mat crop = src(roi);
-            imshow("crop", crop);
-            Rect slicet(roi.x, roi.y, roi.width, roi.height/3);
-            Mat slice1 = src(slicet);
-            imshow("slice1", slice1);
-            Rect slicem(roi.x, roi.y+(roi.height/3), roi.width, roi.height/3);
-            Mat slice2 = src(slicem);
-            imshow("slice2", slice2);
-            Rect sliceb(roi.x, roi.y+(roi.height*2/3), roi.width, roi.height/3);
-            Mat slice3 = src(sliceb);
-            imshow("slice3", slice3);
-            Vec3b t;
-            Vec3b m;
-            Vec3b b;
-
-
-            top = mid = bottom = 0;
-            for (int y = 0; y < roi.height; y++)
-            {
-                if (y < roi.height / 3) {
-                    for (int x = 0; x < roi.width; x++)
-                    {
-                        t = crop.at<Vec3b>(Point(x, y));
-                        if (t.val[0] < 200)
-                            top += (1 / area);
-                    }
-                }
-                else if (y < roi.height * 2 / 3) {
-                    for (int x = 0; x < roi.width; x++)
-                    {
-                        m = crop.at<Vec3b>(Point(x, y));
-                        if (m.val[0] < 200)
-                            mid += (1 / area);
-                    }
-                }
-                else if (y < roi.height) {
-                    for (int x = 0; x < roi.width; x++)
-                    {
-                        b = crop.at<Vec3b>(Point(x, y));
-                        if (b.val[0] < 200)
-                            bottom += (1 / area);
-                    }
-                }
-            }
-
-            PosX = gps->getValues()[0] * 100;
-            PosZ = gps->getValues()[2] * 100;
-            doVictimOffset(PosX, PosZ, false, false);
-            
-            cout << "Visual Victim at GPS Values " << PosX << " " << PosZ << endl;
-            if (bottom - top >= 0.08 && bottom - mid >= 0.03 && mid-top>=0.03) {//If bottom is darker than top and mid
-                changeMessage(PosX, PosZ, 'U');
-                cout << "U victim\n" << endl;
-                board[getCoords().first][getCoords().second].victimChecked = true;
-                return true;
-            }
-            else if (mid - top >= 0.04 && mid - bottom >= 0.04) {//If mid is darker than top and bottom
-                changeMessage(PosX, PosZ, 'H');
-                cout << "H victim\n" << endl;
-                board[getCoords().first][getCoords().second].victimChecked = true;
-                return true;
-            }
-            else if (mid - top <0.04 && bottom-mid < 0.04){
-                changeMessage(PosX, PosZ, 'S');
-                cout << "S victim\n" << endl;
-                board[getCoords().first][getCoords().second].victimChecked = true;
-                return true;
-            }
-            
-        }
-    }
-    waitKey(1); 
-    return false;
-}
-
-bool checkVisualVictimAhead(bool onLeft){
-    //check for visual victims in the next tile ahead - should be removed eventually
-    Camera *detectionCam = onLeft ? camL : camR;
-
-    Mat src(detectionCam->getHeight(), detectionCam->getWidth(), CV_8UC4, (void*)detectionCam->getImage());;
+bool checkVisualVictim(int camNum)
+{
+    Camera *cam;
+    if (camNum == 0) cam = camC;
+    else if (camNum == 1) cam = camL;
+    else if (camNum == 2) cam = camR;
+    else return false;
+    Mat src(cam->getHeight(), cam->getWidth(), CV_8UC4, (void*)cam->getImage());;
     
     if( src.empty() )
     {
       cout << "Could not open or find the image!\n" << endl;
-      //cout << "Usage: " << argv[0] << " <Input image>" << endl;
-      //continue;
+      return false;
     }
     Mat drawing = src.clone();
     cvtColor(src,src,COLOR_BGR2GRAY); //grayscale
@@ -214,17 +96,83 @@ bool checkVisualVictimAhead(bool onLeft){
       
       //printf("width: %f, height: %f\n", width, height);
       //printf("width/height: %f\n", width/height);
-      //double area = width*height/3;
-      //check side walls
-      if(roi.width < 35 && roi.width > 20 && roi.height < 45 && roi.height > 25 && width/height < 0.8  && width/height > 0.65)
+      double area = width*height/3;
+      if(width < 120 && width > 50 && height < 120 && height > 50 && width/height < 1.1  && width/height > 0.9)
       {
-        //printf("go to next tile and turn\n");
-        return true;
-        //switch camera to centre camera    
+        
+        rectangle(src,roi, color,1);
+        Mat crop = src(roi);
+        imshow("crop", crop);
+        Rect slicet(roi.x, roi.y, roi.width, roi.height/3);
+        Mat slice1 = src(slicet);
+        imshow("slice1", slice1);
+        Rect slicem(roi.x, roi.y+(roi.height/3), roi.width, roi.height/3);
+        Mat slice2 = src(slicem);
+        imshow("slice2", slice2);
+        Rect sliceb(roi.x, roi.y+(roi.height*2/3), roi.width, roi.height/3);
+        Mat slice3 = src(sliceb);
+        imshow("slice3", slice3);
+        Vec3b t;
+        Vec3b m;
+        Vec3b b;
+
+        double top = 0;
+        double mid = 0;
+        double bottom = 0;
+        for(int y = 0; y < height; y++)
+        {
+          if(y<height/3){
+            for(int x = 0; x < width; x++)
+            {
+              t = crop.at<Vec3b>(Point(x, y));
+              if(t.val[0] < 200)
+                top+=(1/area);
+            }
+          }
+          else if(y<height*2/3){
+            for(int x = 0; x < roi.width; x++)
+            {
+              m = crop.at<Vec3b>(Point(x, y));
+              if(m.val[0] < 200)
+                mid+=(1/area);
+            }
+          }
+          else if(y<height){
+            for(int x = 0; x < width; x++)
+            {
+              b = crop.at<Vec3b>(Point(x, y));
+              if(b.val[0] < 200)
+                bottom+=(1/area); 
+            }
+          } 
+        }
+        //printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
+
+        int PosX = gps->getValues()[0]*100;
+        int PosZ = gps->getValues()[2]*100;
+        if(top < 0.6 && mid < 0.7 && bottom < 0.6)//exclude noisy info
+        {
+        
+          if(mid-top >= 0.06 && mid-bottom >= 0.06){//If mid is darker than top and bottom
+            changeMessage(PosX, PosZ, 'H');
+            printf("H victim on camera %d\n", camNum);
+            return true;
+          }
+          if(bottom-top >= 0.04 && mid-top >= 0.015){//If bottom is darker than top and mid
+            changeMessage(PosX, PosZ, 'U');
+            printf("U victim on camera %d\n", camNum);
+            return true;
+          }
+
+          if(mid-top < 0.03 || (bottom-mid < 0.03 && bottom - top < 0.04)){
+           changeMessage(PosX, PosZ, 'S');
+            printf("S victim on camera %d\n", camNum);
+            return true;
+          }
+        }
       }
-    }  
-    waitKey(1);
+    }
+
     return false;
 }
-
 

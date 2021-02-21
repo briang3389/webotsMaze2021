@@ -4,7 +4,6 @@ struct Tile {
     bool open[4]; //whether there's a wall on each of the sides
     bool visited; //whether the robot has been to the tile
     bool isHole; //whether the tile is a hole
-    bool hasVisualVictim; //used  for "tile ahead" visual victim; TODO: remove the tile ahead code
     bool victimChecked; //whether there was a  victim already seen on the tile
 };
 
