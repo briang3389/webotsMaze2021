@@ -96,8 +96,8 @@ bool checkVisualVictim(int camNum)
       double width = (double)roi.width;
       double height = (double)roi.height;
       
-      //printf("width: %f, height: %f\n", width, height);
-      //printf("width/height: %f\n", width/height);
+      printf("width: %f, height: %f\n", width, height);
+      printf("width/height: %f\n", width/height);
       double area = width*height/3;
       if(width < 90 && width > 45 && height < 90 && height > 45 && width/height < 1.1  && width/height > 0.9)
       {
@@ -148,11 +148,11 @@ bool checkVisualVictim(int camNum)
             }
           } 
         }
-        //printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
+        printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
 
         int PosX = gps->getValues()[0]*100;
         int PosZ = gps->getValues()[2]*100;
-        if(top < 0.6 && mid < 0.7 && bottom < 0.6)//exclude noisy info
+        if(top > 0.43 && top < 0.6 && mid > 0.43 && mid < 0.7 && bottom > 0.43 && bottom < 0.6)//exclude noisy info
         {
         
           if(mid-top >= 0.06 && mid-bottom >= 0.06){//If mid is darker than top and bottom
