@@ -43,7 +43,7 @@ bool checkHeatVictim() {
     return false;
 }
 
-int thresh = 170;
+int thresh = 190;
 const int max_thresh = 255;
 RNG rng(12345);
 double top;
@@ -61,9 +61,11 @@ int display_dst(int delay);
 bool checkVisualVictim(int camNum)
 {
     Camera *cam;
-    if (camNum == 0) cam = camC;
-    else if (camNum == 1) cam = camL;
-    else if (camNum == 2) cam = camR;
+    if (camNum == 0){ cam = camC; cout << "center: " << endl;}
+    else if (camNum == 1){ cam = camL; cout << "left: " << endl;}
+    else if (camNum == 2){ cam = camR; cout << "right: " << endl;}
+    else if (camNum == 3){ cam = camLFront; cout << "left front: " << endl;}
+    else if (camNum == 4){ cam = camRFront; cout << "right front: " << endl;}
     else return false;
     Mat src(cam->getHeight(), cam->getWidth(), CV_8UC4, (void*)cam->getImage());;
     
@@ -77,7 +79,7 @@ bool checkVisualVictim(int camNum)
     
     blur( src, src, Size(3,3) );
     threshold(src,src,thresh,max_thresh,THRESH_BINARY); //threshold
-    imshow("thresh", src);
+
     Mat canny_output;
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
@@ -97,7 +99,7 @@ bool checkVisualVictim(int camNum)
       //printf("width: %f, height: %f\n", width, height);
       //printf("width/height: %f\n", width/height);
       double area = width*height/3;
-      if(width < 120 && width > 50 && height < 120 && height > 50 && width/height < 1.1  && width/height > 0.9)
+      if(width < 90 && width > 45 && height < 90 && height > 45 && width/height < 1.1  && width/height > 0.9)
       {
         
         rectangle(src,roi, color,1);
@@ -158,12 +160,11 @@ bool checkVisualVictim(int camNum)
             printf("H victim on camera %d\n", camNum);
             return true;
           }
-          if(bottom-top >= 0.04 && mid-top >= 0.015){//If bottom is darker than top and mid
+          if(bottom-top >= 0.04 && mid-top >= 0.015 && mid-top < 0.05){//If bottom is darker than top and mid
             changeMessage(PosX, PosZ, 'U');
             printf("U victim on camera %d\n", camNum);
             return true;
           }
-
           if(mid-top < 0.03 || (bottom-mid < 0.03 && bottom - top < 0.04)){
            changeMessage(PosX, PosZ, 'S');
             printf("S victim on camera %d\n", camNum);
@@ -175,4 +176,3 @@ bool checkVisualVictim(int camNum)
 
     return false;
 }
-
