@@ -1,0 +1,30 @@
+  turretSlot [
+    Camera {
+      translation -0.02 -0.02 -0.045
+      name "camLFront"
+    }
+    Camera {
+      translation 0.02 -0.02 -0.045
+      name "camRFront"
+    }
+    Camera {
+      translation 0.03 -0.02 -0.013
+      rotation 0 -1 0 1.5707896938995747
+      name "camR"
+    }
+    Camera {
+      translation -0.03 -0.02 -0.013
+      rotation 0 -1 0 -1.5707996938995747
+      name "camL"
+    }
+    E-puckDistanceSensor {
+      translation -0.032 -0.02 -0.025
+      rotation 0 1 0 1.5707996938995747
+      name "lds"
+    }
+    E-puckDistanceSensor {
+      translation 0.032 -0.02 -0.025
+      rotation 0 1 0 1.5708003061004252
+      name "rds"
+    }
+  ]
