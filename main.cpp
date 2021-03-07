@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
                 //cout << "Turned!" << endl;
             }
             else {
-                if (checkHeatVictim() || checkVisualVictim(0) || checkVisualVictim(1) || checkVisualVictim(2)){
+                if (checkHeatVictim() || checkVisualVictim(0) || checkVisualVictim(1) || checkVisualVictim(2) || checkVisualVictim(3) || checkVisualVictim(4)){
                     timer = 0;
                     motorPrevious = make_pair(rightMotor->getVelocity(), leftMotor->getVelocity());
                     leftMotor->setVelocity(0);
@@ -119,15 +119,13 @@ int main(int argc, char** argv) {
                     rightMotor->setVelocity(min(rightMotor->getMaxVelocity(), rightMotor->getVelocity() + .005));
                     leftMotor->setVelocity(min(rightMotor->getMaxVelocity(), leftMotor->getVelocity() - .005));
                 }
-                //timer++;
-                //if (checkHeatVictim(message) || checkVisualVictim(true, message) || checkVisualVictim(false, message)) {
-                if (checkHeatVictim()) {
+                if (checkHeatVictim() || checkVisualVictim(0) || checkVisualVictim(1) || checkVisualVictim(2) || checkVisualVictim(3) || checkVisualVictim(4)){
+                    timer = 0;
                     motorPrevious = make_pair(rightMotor->getVelocity(), leftMotor->getVelocity());
                     leftMotor->setVelocity(0);
                     rightMotor->setVelocity(0);
                     stopping = true;
                 }
-                
                 if (checkHole()) {
                     cout << "There's a hole!" << endl;
                     reversing = true;
