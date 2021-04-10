@@ -43,7 +43,7 @@ bool checkHeatVictim() {
     return false;
 }
 
-int thresh = 190;
+int thresh = 150;
 const int max_thresh = 255;
 RNG rng(12345);
 double top;
@@ -58,14 +58,66 @@ char window_name[] = "Smoothing Demo";
 int display_caption(const char* caption);
 int display_dst(int delay);
 
+char getLetter(double Values[3])
+{
+    //{top, mid, bottom}
+    double Data[3][3] = {{0.230769, 0.394477, 0.246548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
+                        {0.268383, 0.280079, 0.337278},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
+                        {0.332051, 0.328107, 0.363748}}; //Sdata top: 0.302051, mid: 0.278107, bottom: 0.343748
+    
+    //{mid-top, mid-bottom, bottom-top}
+    double diffs[3][3];
+    for(int n = 0; n < 3; n++)
+    {
+        diffs[n][0] = 10*(Data[n][1] - Data[n][0]);
+        diffs[n][1] = 10*(Data[n][1] - Data[n][2]);
+        diffs[n][2] = 10*(Data[n][2] - Data[n][0]);
+    }
+    double valDiffs[3] = {10*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
+//    printf("valDiffs %f, %f, %f\n", valDiffs[0], valDiffs[1], valDiffs[2]);
+    
+    double dist[3] = { 0 };
+    for(int n = 0; n < 3; n++)//compare values
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            dist[n] += (Values[i]-Data[n][i])*(Values[i]-Data[n][i]);
+        }
+    }
+    for(int n = 0; n < 3; n++)//compare diffs
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            dist[n] += (valDiffs[i]-diffs[n][i])*(valDiffs[i]-diffs[n][i]);
+        }
+        dist[n] = sqrt(dist[n]);
+    }
+    int letter = 0;
+    if(dist[1] < dist[letter])
+        letter = 1;
+    if(dist[2] < dist[letter])
+        letter = 2;
+    if(letter == 0){//Closest to H    
+        printf("H victim\n");
+        return 'H';
+    }
+    else if(letter == 1){//Closest to U 
+        printf("U victim\n");
+        return 'U';
+    }
+    else{//Closest to S
+        printf("S victim\n");
+        return 'S';
+    }
+}
 bool checkVisualVictim(int camNum)
 {
     Camera *cam;
-    if (camNum == 0){ cam = camC; cout << "center: " << endl;}
-    else if (camNum == 1){ cam = camL; cout << "left: " << endl;}
-    else if (camNum == 2){ cam = camR; cout << "right: " << endl;}
-    else if (camNum == 3){ cam = camLFront; cout << "left front: " << endl;}
-    else if (camNum == 4){ cam = camRFront; cout << "right front: " << endl;}
+    if (camNum == 0){ cam = camC; cout << "center"<< endl;}
+    else if (camNum == 1){ cam = camL; cout << "left" << endl;}
+    else if (camNum == 2){ cam = camR; cout << "right" << endl;}
+//    else if (camNum == 3) cam = camLFront;
+//    else if (camNum == 4) cam = camRFront;
     else return false;
     Mat src(cam->getHeight(), cam->getWidth(), CV_8UC4, (void*)cam->getImage());;
     
@@ -98,78 +150,69 @@ bool checkVisualVictim(int camNum)
       
       printf("width: %f, height: %f\n", width, height);
       printf("width/height: %f\n", width/height);
-      double area = width*height/3;
-      if(width < 90 && width > 45 && height < 90 && height > 45 && width/height < 1.1  && width/height > 0.9)
+      double area = 39*13;
+      if(width < 80 && width > 33 && height < 80 && height > 33 && width/height < 1.08  && width/height > 0.94)
       {
-        
         rectangle(src,roi, color,1);
         Mat crop = src(roi);
-        imshow("crop", crop);
-        Rect slicet(roi.x, roi.y, roi.width, roi.height/3);
-        Mat slice1 = src(slicet);
+        Mat reCrop;
+        resize(crop, reCrop, Size(), 39.0*3/width, 39.0/height);
+     
+        imshow("reCrop", reCrop);
+        Rect slicet(0, 0, 39*3, 13);
+        Mat slice1 = reCrop(slicet);
         imshow("slice1", slice1);
-        Rect slicem(roi.x, roi.y+(roi.height/3), roi.width, roi.height/3);
-        Mat slice2 = src(slicem);
+        Rect slicemh(0, 13, 39*3, 13);
+        Mat slice2 = reCrop(slicemh);
         imshow("slice2", slice2);
-        Rect sliceb(roi.x, roi.y+(roi.height*2/3), roi.width, roi.height/3);
-        Mat slice3 = src(sliceb);
+        Rect sliceb(0, 26, 39*3, 13);
+        Mat slice3 = reCrop(sliceb);
         imshow("slice3", slice3);
+        
         Vec3b t;
         Vec3b m;
         Vec3b b;
-
         double top = 0;
         double mid = 0;
         double bottom = 0;
-        for(int y = 0; y < height; y++)
+
+        for(int y = 0; y < 39; y++)//get horizontal slices
         {
-          if(y<height/3){
-            for(int x = 0; x < width; x++)
+          if(y<13){
+            for(int x = 0; x < 39; x++)
             {
-              t = crop.at<Vec3b>(Point(x, y));
-              if(t.val[0] < 200)
+              t = reCrop.at<Vec3b>(Point(x, y));
+              if(t.val[0] < thresh)
                 top+=(1/area);
             }
           }
-          else if(y<height*2/3){
-            for(int x = 0; x < roi.width; x++)
+          else if(y<26){
+            for(int x = 0; x < 39; x++)
             {
-              m = crop.at<Vec3b>(Point(x, y));
-              if(m.val[0] < 200)
+              m = reCrop.at<Vec3b>(Point(x, y));
+              if(m.val[0] < thresh)
                 mid+=(1/area);
             }
           }
-          else if(y<height){
-            for(int x = 0; x < width; x++)
+          else if(y<39){
+            for(int x = 0; x < 39; x++)
             {
-              b = crop.at<Vec3b>(Point(x, y));
-              if(b.val[0] < 200)
-                bottom+=(1/area); 
+              b = reCrop.at<Vec3b>(Point(x, y));
+              if(b.val[0] < thresh)
+                bottom+=(1/area);
             }
           } 
         }
         printf("top: %f, mid: %f, bottom: %f\n", top, mid, bottom);
-
         int PosX = gps->getValues()[0]*100;
         int PosZ = gps->getValues()[2]*100;
-        if(top > 0.43 && top < 0.6 && mid > 0.43 && mid < 0.7 && bottom > 0.43 && bottom < 0.6)//exclude noisy info
+        if(top > 0.1 && top < 0.45 && mid > 0.1 && mid < 0.6 && bottom > 0.1 && bottom < 0.5)//exclude noisy info
         {
-        
-          if(mid-top >= 0.06 && mid-bottom >= 0.06){//If mid is darker than top and bottom
-            changeMessage(PosX, PosZ, 'H');
-            printf("H victim on camera %d\n", camNum);
+            double img[3] = {top, mid, bottom};
+            char letter = getLetter(img);
+            changeMessage(PosX, PosZ, letter);
+            printf("%c victim on camera %d\n", letter, camNum);
             return true;
-          }
-          if(bottom-top >= 0.04 && mid-top >= 0.015 && mid-top < 0.05){//If bottom is darker than top and mid
-            changeMessage(PosX, PosZ, 'U');
-            printf("U victim on camera %d\n", camNum);
-            return true;
-          }
-          if(mid-top < 0.03 || (bottom-mid < 0.03 && bottom - top < 0.04)){
-           changeMessage(PosX, PosZ, 'S');
-            printf("S victim on camera %d\n", camNum);
-            return true;
-          }
         }
       }
     }
