@@ -11,7 +11,6 @@
 #include <webots/GPS.hpp>
 #include <webots/LightSensor.hpp>
 #include <webots/Emitter.hpp>
-#include <webots/Receiver.hpp>
 #include <opencv2/opencv.hpp>
 
 using namespace std;
