@@ -39,7 +39,7 @@ int visualTimer = 0;
 stack<pair<int, int>> steps;
 
 
-const bool resetMapForLOP=false;
+const bool resetMapForLOP=true;
 Tile boardBackup[boardSize][boardSize];
 pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
@@ -56,6 +56,51 @@ int doTimeStep()
   #endif
   return robot->step(timeStep);
 }
+
+int getTileType(const unsigned char* img)
+{ //0normal 1checkpoint 2pit 3red 4blue 5purple
+
+  int r=Camera::imageGetRed(img,1,0,0);
+  int g=Camera::imageGetGreen(img,1,0,0);
+  int b=Camera::imageGetBlue(img,1,0,0);
+
+  const char* str;
+  int ret;
+  if(r>230 && g>230 && b>230)
+  {
+    str="checkpoint";
+    ret=1;
+  }
+  else if(r<100 && g<100 && b<100)
+  {
+    str="pit";
+    ret=2;
+  }
+  else if(r>190 && g<100 && b<100)
+  {
+    str="red";
+    ret=3;
+  }
+  else if(r<100 && g<100 && b>190)
+  {
+    str="blue";
+    ret=4;
+  }
+  else if(r>80 && g<90 && b>130)
+  {
+    str="purple";
+    ret=5;
+  }
+  else
+  {
+    str="normal";
+    ret=0;
+  }
+  cout<<r<<" "<<g<<" "<<b<<"    "<<str<<endl;
+  return ret;
+}
+pair<int,int> prevCoords={-1,-1};
+//vector<pair<int,int>> allKnownCheckpoints;
 
 int main(int argc, char **argv)
 {
@@ -130,25 +175,37 @@ int main(int argc, char **argv)
       loc=getCoords();
       continue;
     }
-    if(resetMapForLOP) //can finish implementing once i figure out how to know if im in checkpoint
-    { /*
-      pair<int,int> tmploc=getCoords(); //this method will use too much memory I think
+    if(resetMapForLOP) //STILL NEED TO TEST (including if LOP happens before any checkpoint is hit)
+    { 
+      pair<int,int> tmploc=getCoords();
       if(tmploc != prevCoords)
       {
         prevCoords=tmploc;
-        
-      }*/
-      if(false) //if in checkpoint and checkpoint hasnt been entered before
-      { //savebackup
-        for(int i=0;i<boardSize;i++)
+        if(getTileType(colorCam->getImage())==1) //is checkpoint
         {
-          for(int j=0;j<boardSize;j++)
+          cout<<"saving map and stuff"<<endl;
+          //savebackup
+          for(int i=0;i<boardSize;i++)
           {
-            boardBackup[i][j]=board[i][j];
-            boardParentsBackup[i][j]=boardParents[i][j];
-            traveledBackup[i][j]=traveled[i][j];
+            for(int j=0;j<boardSize;j++)
+            {
+              boardBackup[i][j]=board[i][j];
+              boardParentsBackup[i][j]=boardParents[i][j];
+              traveledBackup[i][j]=traveled[i][j];
+            }
           }
         }
+        /*
+        bool alreadyBeenThere=false;
+        for(pair<int,int> pairr:allKnownCheckpoints)
+        {
+          if(tmploc==pairr)
+          {
+            alreadyBeenThere=true;
+            break;
+          }
+        }
+        */
       }
     }
     
