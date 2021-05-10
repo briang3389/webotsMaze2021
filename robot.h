@@ -1,5 +1,6 @@
 //robot.h: defines all the sensors and motors
 
+int timeStep;
 Robot *robot = new Robot();
 Motor *leftMotor = robot->getMotor("left wheel motor");
 Motor *rightMotor = robot->getMotor("right wheel motor");
