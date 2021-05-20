@@ -2,8 +2,8 @@
 #include <robot.h>
 #include <angle.h>
 #include <tile.h>
-#include <environment.h>
 #include <message.h>
+#include <environment.h>
 #include <bfs.h>
 
 int timeStep;
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
                     setMotors(min(motorMax(), lVel() - .005), min(motorMax(), rVel() + .005));
                 }
                 //if (checkHeatVictim(message) || checkVisualVictim(true, message) || checkVisualVictim(false, message)) {
-                if (checkAllVictims()) {
+                if (checkVisualVictim(camR) || checkVisualVictim(camL)) {
                     motorPrevious = make_pair(lVel(), rVel());
                     setMotors(0, 0);
                     stopping = true;
