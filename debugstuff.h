@@ -1,3 +1,5 @@
+#include <sys/time.h>
+
 #define DEBUGSTUFF
 
 Point centeredTextCoords(const char *s, int x, int y)
@@ -21,6 +23,7 @@ void debugStuff() //each box is 30px
   const int robotSize=15;
   const Point textCoords1(10,600);
   Point textCoords2(10,500);
+  Point textCoords3(150,600);
   //45-55
   const int startIndex=45;
   const int endIndex=55;
@@ -76,11 +79,19 @@ void debugStuff() //each box is 30px
     
     putText(img, staates[i], textCoords2, FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0), isupper(staates[i][0])?2:1);
   }
+  
+  putText(img,tileTypeStr.c_str(),textCoords3,FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
+  
   char bruh[100];
-  sprintf(bruh,"%ld",time(0));
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  unsigned long long millisecondsSinceEpoch =
+  (unsigned long long)(tv.tv_sec) * 1000 +
+  (unsigned long long)(tv.tv_usec) / 1000;
+  sprintf(bruh,"%llu",millisecondsSinceEpoch);
   putText(img, bruh, Point(10,650), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
   imshow("debug",img); //WHY IS THIS DELAYED?? use time(0) to find out. print it to console and put it on the image
-  waitKey(1);
+  waitKey(10);
   //ok so the img is being created fine but imshow is just garbage
   //nvm you just need waitKey(1)
   //imwrite(string("/home/brian/tmpfs/")+to_string(time(0))+string(".png"), img);

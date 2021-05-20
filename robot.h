@@ -1,52 +1,62 @@
-//robot.h: defines all the sensors and motors
+//robot.h: defines all the motors and sensors
 
-int timeStep;
-Robot *robot = new Robot();
-Motor *leftMotor = robot->getMotor("left wheel motor");
-Motor *rightMotor = robot->getMotor("right wheel motor");
-PositionSensor *leftEncoders = leftMotor->getPositionSensor();
-PositionSensor *rightEncoders = rightMotor->getPositionSensor();
-DistanceSensor *infrared[8];
-Camera *colorCam = robot->getCamera("colour_sensor");
-Gyro *gyro = robot->getGyro("gyro");
-LightSensor *leftHeat = robot->getLightSensor("left_heat_sensor");
-LightSensor *rightHeat = robot->getLightSensor("right_heat_sensor");
-Emitter *emitter = robot->getEmitter("emitter");
-GPS *gps = robot->getGPS("gps");
-Camera *camR = robot->getCamera("camera_right");
-Camera *camL = robot->getCamera("camera_left");
-Camera *camC = robot->getCamera("camera_centre");
+Robot* robot = new Robot();
+Motor* leftMotor = robot->getMotor("wheel2 motor");
+Motor* rightMotor = robot->getMotor("wheel1 motor");
+DistanceSensor* infrared[7];
+Gyro* gyro = robot->getGyro("gyro");
+Emitter* emitter = robot->getEmitter("emitter");
+GPS* gps = robot->getGPS("gps");
+Camera *camR = robot->getCamera("rCam");
+Camera *camL = robot->getCamera("lCam");
+
 Receiver *rec = robot->getReceiver("receiver");
+Camera *colorCam = robot->getCamera("colour_sensor");
 
-int init()
-{
-  int timeStep = (int) robot->getBasicTimeStep();
 
-  for(int i = 0; i < 8; i++)
-  {
-    infrared[i] = robot->getDistanceSensor("ps" + to_string(i));
-    infrared[i]->enable(timeStep);
-  }
-  leftEncoders->enable(timeStep);
-  rightEncoders->enable(timeStep);
+//PositionSensor* leftEncoders = leftMotor->getPositionSensor();
+//PositionSensor* rightEncoders = rightMotor->getPositionSensor();
+//Camera* colorCam = robot->getCamera("colour_sensor");
+//LightSensor* leftHeat = robot->getLightSensor("left_heat_sensor");
+//LightSensor* rightHeat = robot->getLightSensor("right_heat_sensor");
 
-  gyro->enable(timeStep);
-  gps->enable(timeStep);
-  leftHeat->enable(timeStep);
-  rightHeat->enable(timeStep);
-  colorCam->enable(timeStep);
-  camL->enable(timeStep);
-  camR->enable(timeStep);
-  camC->enable(timeStep);
-  leftMotor->setPosition(INFINITY);
-  rightMotor->setPosition(INFINITY);
+int init() {
+    int timeStep = (int)robot->getBasicTimeStep();
 
-  leftMotor->setVelocity(0);
-  rightMotor->setVelocity(0);
+    for (int i = 0; i < 7; i++) {
+        infrared[i] = robot->getDistanceSensor("distance sensor" + to_string(i + 1));
+        infrared[i]->enable(timeStep);
+    }
+    
+    gyro->enable(timeStep);
+    gps->enable(timeStep);
+    colorCam->enable(timeStep);
+    camL->enable(timeStep);
+    camR->enable(timeStep);
+    leftMotor->setPosition(INFINITY);
+    rightMotor->setPosition(INFINITY);
+    //leftEncoders->enable(timeStep);
+    //rightEncoders->enable(timeStep);
+    //leftHeat->enable(timeStep);
+    //rightHeat->enable(timeStep);
+    //colorCam->enable(timeStep);
+    //camC->enable(timeStep);
 
-  rec->enable(timeStep);
-
-  for(int i = 0; i < 10; i++) robot->step(timeStep);
-
-  return timeStep;
+    leftMotor->setVelocity(0);
+    rightMotor->setVelocity(0);
+    
+    rec->enable(timeStep);
+    
+    for (int i = 0; i < 10; i++) robot->step(timeStep);
+  
+    return timeStep;
 }
+
+void setMotors(double lVal, double rVal){
+    //cout << "Motors set to: " << lVal << ", " << rVal << endl;
+    leftMotor->setVelocity(-lVal);
+    rightMotor->setVelocity(rVal);
+}
+
+double lVel(){ return -leftMotor->getVelocity();}
+double rVel(){ return rightMotor->getVelocity();}
