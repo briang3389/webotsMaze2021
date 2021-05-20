@@ -126,6 +126,256 @@ double motorMax(){
     return min(leftMotor->getMaxVelocity(), rightMotor->getMaxVelocity());
 }
 
+
+const int max_value_H = 360/2;
+const int max_value = 255;
+const String window_capture_name = "Video Capture";
+const String window_detection_name = "Object Detection";
+
+int low_H = 150, low_S = 60, low_V = 60;
+int high_H = max_value_H, high_S = max_value, high_V = max_value;
+int low_Hy = 0;
+int high_Hy = 40;
+int PosX;
+int PosZ;
+  
+int thresh = 150;
+const int max_thresh = 255;
+
+//blur
+int DELAY_CAPTION = 1500;
+int DELAY_BLUR = 100;
+int MAX_KERNEL_LENGTH = 31;
+char window_name[] = "Smoothing Demo";
+int display_caption( const char* caption );
+int display_dst( int delay );
+char getLetter(double Values[3])
+{
+    //{top, mid, bottom}
+    double Data[3][3] = {{0.240769, 0.344477, 0.296548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
+                        {0.319527, 0.330079, 0.358974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
+                        {0.282051, 0.258107, 0.313748}}; //Sdata top: 0.302051, mid: 0.278107, bottom: 0.343748
+    
+    //{mid-top, mid-bottom, bottom-top}
+    double diffs[3][3];
+    for(int n = 0; n < 3; n++)
+    {
+        diffs[n][0] = 10*(Data[n][1] - Data[n][0]);
+        diffs[n][1] = 10*(Data[n][1] - Data[n][2]);
+        diffs[n][2] = 10*(Data[n][2] - Data[n][0]);
+    }
+    double valDiffs[3] = {10*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
+//    printf("valDiffs %f, %f, %f\n", valDiffs[0], valDiffs[1], valDiffs[2]);
+    
+    double dist[3] = { 0 };
+    for(int n = 0; n < 3; n++)
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            dist[n] += (Values[i]-Data[n][i])*(Values[i]-Data[n][i]);
+        }
+//        dist[n] = sqrt(dist[n]);
+    }
+    for(int n = 0; n < 3; n++)
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            dist[n] += (valDiffs[i]-diffs[n][i])*(valDiffs[i]-diffs[n][i]);
+        }
+        dist[n] = sqrt(dist[n]);
+    }
+    int letter = 0;
+    if(dist[1] < dist[letter])
+        letter = 1;
+    if(dist[2] < dist[letter])
+        letter = 2;
+    if(letter == 0){//Closest to H    
+        printf("H victim\n");
+        return 'H';
+    }
+    else if(letter == 1){//Closest to U 
+        printf("U victim\n");
+        return 'U';
+    }
+    else{//Closest to S
+        printf("S victim\n");
+        return 'S';
+    }
+}
+
+bool checkVisualVictim(Camera* cam)
+{
+    namedWindow(window_capture_name);
+    namedWindow(window_detection_name);
+    Mat frame_HSV, frame_red, frame_yellow;
+
+    Mat frame(cam->getHeight(), cam->getWidth(), CV_8UC4, (void*)cam->getImage());;
+    
+    if( frame.empty() )
+    {
+      cout << "Could not open or find the image!\n" << endl;
+      return false;
+    }
+    Mat clone = frame.clone();
+    Mat drawing = frame.clone();
+        // Convert from BGR to HSV colorspace
+        cvtColor(frame, frame_HSV, COLOR_BGR2HSV);
+        // Detect the object based on HSV Range Values
+        inRange(frame_HSV, Scalar(low_H, low_S, low_V), Scalar(high_H, high_S, high_V), frame_red);
+        inRange(frame_HSV, Scalar(low_Hy, low_S, low_V), Scalar(high_Hy, high_S, high_V), frame_yellow);
+        // Show the frames
+        imshow(window_capture_name, frame);
+        imshow("red", frame_red);
+        imshow("yellow", frame_yellow);
+    waitKey(1);
+
+    Mat canny_output;
+    vector<vector<Point> > contours;
+    vector<Vec4i> hierarchy;
+    findContours( frame_red, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+    if(contours.size() == 0) // if see no red
+    {
+      cvtColor(frame,clone,COLOR_BGR2GRAY); //grayscale
+      
+      //blur( clone, clone, Size(3,3) );
+      GaussianBlur(clone, clone, cv::Size(0, 0), 3);
+      addWeighted(clone, 1.5, clone, -0.5, 0, clone);
+      threshold(clone,clone,thresh,max_thresh,THRESH_BINARY); //threshold
+      imshow("thresh", clone);
+      Mat inverted;
+      bitwise_not ( clone, inverted );
+      imshow("inverted", inverted);
+      Mat canny_output;
+      vector<vector<Point>> contours;
+      vector<vector<Point>> invContours;
+      vector<Vec4i> hierarchy;
+      
+      findContours( clone, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+      findContours( inverted, invContours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+      for( size_t i = 0; i < contours.size(); i++ )
+      {
+        Scalar color = Scalar( 0, 255, 255);
+  
+        drawContours( clone, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+        Rect roi = boundingRect(contours[i]);
+        imshow("conts", clone);
+        double width = (double)roi.width;
+        double height = (double)roi.height;
+        
+        printf("width: %f, height: %f\n", width, height);
+        printf("width/height: %f\n", width/height);
+        
+        if(width < 100 && width > 19 && height < 100 && height > 19 && width/height < 1.1  && width/height > 0.9)
+        {
+          double area = 39*13;
+          rectangle(clone,roi, color,1);
+          Mat crop = clone(roi);
+          Mat reCrop;
+          resize(crop, reCrop, Size(), 45.0*3/width, 45.0/height);
+       
+          imshow("reCrop", reCrop);
+          Rect slicet(9, 3, 39*3, 13);
+          Mat slice1 = reCrop(slicet);
+          imshow("slice1", slice1);
+          Rect slicemh(9, 16, 39*3, 13);
+          Mat slice2 = reCrop(slicemh);
+          imshow("slice2", slice2);
+          Rect sliceb(9, 29, 39*3, 13);
+          Mat slice3 = reCrop(sliceb);
+          imshow("slice3", slice3);
+          
+          Vec3b t;
+          Vec3b m;
+          Vec3b b;
+          double top = 0;
+          double mid = 0;
+          double bottom = 0;
+  
+          for(int y = 0; y < 42; y++)//get horizontal slices
+          {
+            if(y<14){
+              for(int x = 0; x < 42; x++)
+              {
+                t = reCrop.at<Vec3b>(Point(x, y));
+                if(t.val[0] < thresh){
+                  top+=(1/area);
+                }
+              }
+            }
+            else if(y<28){
+              for(int x = 0; x < 42; x++)
+              {
+                m = reCrop.at<Vec3b>(Point(x, y));
+                if(m.val[0] < thresh){
+                  mid+=(1/area);
+                }
+              }
+            }
+            else if(y<42){
+              for(int x = 0; x < 42; x++)
+              {
+                b = reCrop.at<Vec3b>(Point(x, y));
+                if(b.val[0] < thresh){
+                  bottom+=(1/area);
+                }
+              }
+            } 
+          }
+          printf("top: %f, mid: %f, bot: %f\n", top, mid, bottom);
+          waitKey(1);
+          PosX = gps->getValues()[0]*100;
+          PosZ = gps->getValues()[2]*100;
+
+          if(top > 0.18 && top < 0.48 && mid > 0.22 && mid < 0.44 && bottom > 0.2 && bottom < 0.55)//exclude noisy info
+          {
+              double img[3] = {top, mid, bottom};
+              changeMessage(PosX, PosZ, getLetter(img));
+              return true;
+          }
+          else if(top > 0.5 && top < 0.88 && mid > 0.44 && mid < 0.62 && bottom > 0.5 && bottom < 0.88)
+          {
+              if(bottom > 0.8){
+                changeMessage(PosX, PosZ, 'C');
+              }
+              else{
+                changeMessage(PosX, PosZ, 'P');
+              }
+
+              return true;
+          }
+        }
+      }
+    }
+    else{// yes red
+      for( size_t i = 0; i < contours.size(); i++ )
+      {
+        Scalar color = Scalar( 0, 0, 255);
+        drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+        Rect roi = boundingRect(contours[i]);
+        
+        double width = (double)roi.width;
+        double height = (double)roi.height;
+        
+        if(width > 14 && width < 100 && height > 7 && height < 100 && (width/height > 0.9 && width/height < 2.1))
+        {
+          printf("width: %f, height: %f\n", width, height);
+          printf("width/height: %f\n", width/height);
+          PosX = gps->getValues()[0]*100;
+          PosZ = gps->getValues()[2]*100;
+        
+          findContours( frame_yellow, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
+          if(contours.size() == 0){ //if no yellow
+              changeMessage(PosX, PosZ, 'F');
+          }
+          else{
+              changeMessage(PosX, PosZ, 'O');
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+}
 bool checkAllVictims(){return false;}
 
 string tileTypeStr;
