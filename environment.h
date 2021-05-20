@@ -265,7 +265,7 @@ bool checkVisualVictim(Camera* cam)
         printf("width: %f, height: %f\n", width, height);
         printf("width/height: %f\n", width/height);
         
-        if(width < 100 && width > 19 && height < 100 && height > 19 && width/height < 1.1  && width/height > 0.9)
+        if(width < 100 && width > 40 && height < 100 && height > 40 && width/height < 1.1  && width/height > 0.9)
         {
           double area = 39*13;
           rectangle(clone,roi, color,1);
@@ -356,7 +356,7 @@ bool checkVisualVictim(Camera* cam)
         double width = (double)roi.width;
         double height = (double)roi.height;
         
-        if(width > 14 && width < 100 && height > 7 && height < 100 && (width/height > 0.9 && width/height < 2.1))
+        if(width > 30 && width < 100 && height > 15 && height < 100 && (width/height > 0.9 && width/height < 2.1))
         {
           printf("width: %f, height: %f\n", width, height);
           printf("width/height: %f\n", width/height);
