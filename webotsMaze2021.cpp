@@ -20,7 +20,7 @@ bool& visualChecking = statesArr[6];
 
 //constants
 const double motorSpeed = 5.0;
-const double stoppingConst = 250.0;
+const double stoppingConst = 275.0;
 
 //movement variables
 double turnTarget = 0.0;
@@ -31,7 +31,7 @@ double startOfMoveGPS = 0.0;
 //other stuff
 pair<double, double> motorPrevious;
 pair<int, int> targetTile;
-
+bool doLOPstuff=false;
 int timer = 0;
 
 stack<pair<int, int>> steps;
@@ -76,14 +76,18 @@ int main(int argc, char **argv)
 
   while(doTimeStep() != -1)
   {
-    if(rec->getQueueLength() > 0) //lack of progress just happened
-    {
-      cout<<"LOP "<< ++numLOP <<endl;
-      //char c = *(char*) 
-      rec->getData(); //TODO: have it reset the map to last checkpoint
-      rec->nextPacket();
-      //printf("%c\t%d\n", c, numLOP);
-
+      if(rec->getQueueLength() > 0 || doLOPstuff) //lack of progress just happened
+      {
+        doLOPstuff=false;
+        
+        cout<<"LOP "<< ++numLOP <<endl;
+        if(rec->getQueueLength()>0)
+        {
+        //char c = *(char*) 
+        rec->getData(); //TODO: have it reset the map to last checkpoint
+        rec->nextPacket();
+        //printf("%c\t%d\n", c, numLOP);
+        }
       //reset state
       turning = false;
       advancing = false;
@@ -167,13 +171,21 @@ int main(int argc, char **argv)
         */
       }
     }
-    
-    
-
     //stop for victim
         if (stopping) {
             if (timer == stoppingConst) {
                 sendMessage();
+                for(int i = 0; i < 50; i++)
+                {
+                    doTimeStep();
+                }
+                setMotors(1.5,-1.5);
+                while((int)getAngle()!=0)
+                {
+                    doTimeStep();
+                }
+                doLOPstuff=true;
+                continue;
             }
             if (timer >= stoppingConst + 30) {
                 timer = 0;
@@ -339,8 +351,11 @@ int main(int argc, char **argv)
             }
         }
     }
-    
     #ifdef DEBUGSTUFF
     debugStuff(true);
     #endif
+    for(int i = 0; i < 50; i++)
+    {
+      doTimeStep();
+    }
 }
