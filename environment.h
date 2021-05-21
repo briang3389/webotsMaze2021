@@ -260,7 +260,7 @@ bool checkVisualVictim(Camera* cam)
         printf("width: %f, height: %f\n", width, height);
         printf("width/height: %f\n", width/height);
         
-        if(width < 100 && width > 50 && height < 100 && height > 50 && width/height < 1.1  && width/height > 0.9)
+        if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.1  && width/height > 0.9)
         {
           double area = 39*13;
           rectangle(clone,roi, color,1);
