@@ -151,7 +151,7 @@ char getLetter(double Values[3])
 {
     //{top, mid, bottom}
     double Data[3][3] = {{0.240769, 0.344477, 0.296548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
-                        {0.319527, 0.330079, 0.358974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
+                        {0.299527, 0.300079, 0.328974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
                         {0.282051, 0.258107, 0.313748}}; //Sdata top: 0.302051, mid: 0.278107, bottom: 0.343748
     
     //{mid-top, mid-bottom, bottom-top}
@@ -259,7 +259,7 @@ bool checkVisualVictim(Camera* cam)
         
         printf("width: %f, height: %f\n", width, height);
         printf("width/height: %f\n", width/height);
-        if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.1  && width/height > 0.9)
+        if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.08  && width/height > 0.93)
         {
           double area = 39*13;
           rectangle(clone,roi, color,1);
@@ -316,7 +316,7 @@ bool checkVisualVictim(Camera* cam)
             } 
           }
           printf("top: %f, mid: %f, bot: %f\n", top, mid, bottom);
-          waitKey(1);
+          
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
           if(top > 0.18 && top < 0.5 && mid > 0.22 && mid < 0.46 && bottom > 0.2 && bottom < 0.6)//exclude noisy info
@@ -328,7 +328,10 @@ bool checkVisualVictim(Camera* cam)
           else if(top > 0.5 && top < 0.9 && mid > 0.46 && mid < 0.82 && bottom > 0.6)
           {
               if(bottom > 0.8){
-                changeMessage(PosX, PosZ, 'C');
+                if(bottom > 1.1)
+                  changeMessage(PosX, PosZ, 'C');
+                else
+                  return false;
               }
               else{
                 changeMessage(PosX, PosZ, 'P');
@@ -348,7 +351,7 @@ bool checkVisualVictim(Camera* cam)
         double width = (double)roi.width;
         double height = (double)roi.height;
         
-        if(width > 30 && width < 100 && height > 15 && height < 100 && (width/height > 0.9 && width/height < 2.1))
+        if(width > 40 && width < 100 && height > 20 && height < 100 && (width/height > 0.9 && width/height < 2.1))
         {
           printf("width: %f, height: %f\n", width, height);
           printf("width/height: %f\n", width/height);
