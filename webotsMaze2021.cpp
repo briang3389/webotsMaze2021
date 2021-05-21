@@ -206,7 +206,7 @@ int main(int argc, char **argv)
                 else startOfMoveGPS = gps->getValues()[0];
             }
             else {
-                if (checkAllVictims()) {
+                if (checkVisualVictim(camR) || checkVisualVictim(camL)) {
                     timer = 0;
                     motorPrevious = make_pair(leftMotor->getVelocity(), rightMotor->getVelocity());
                     leftMotor->setVelocity(0);
