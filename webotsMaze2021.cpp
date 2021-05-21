@@ -37,7 +37,7 @@ int timer = 0;
 stack<pair<int, int>> steps;
 
 
-const bool resetMapForLOP=true;
+const bool resetMapForLOP=false;
 Tile boardBackup[boardSize][boardSize];
 pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
         }
       }
       
-      for(int i = 0; i < 10; i++)
+      for(int i = 0; i < 100; i++)
       {
         cout<<i+1<<" ";
         fflush(stdout);
@@ -252,7 +252,18 @@ int main(int argc, char **argv)
                     advancing = false;
                     setMotors(-motorSpeed / 2, -motorSpeed / 2);
                     board[targetTile.first][targetTile.second].visited = true;
-                    board[targetTile.first][targetTile.second].isHole = true;
+                    pair<int, int> neighborThing = neighborTile(targetTile, direction);
+                    pair<int, int> leftNeighbor = neighborTile(neighborThing, (direction + 3) % 4);
+                    pair<int, int> farNeighbor = neighborTile(neighborThing, direction);
+                    pair<int, int> farLeftNeighbor = neighborTile(leftNeighbor, direction);
+                    board[neighborThing.first][neighborThing.second].visited = true;
+                    board[neighborThing.first][neighborThing.second].isHole = true;
+                    board[leftNeighbor.first][leftNeighbor.second].visited = true;
+                    board[leftNeighbor.first][leftNeighbor.second].isHole = true;
+                    board[farNeighbor.first][farNeighbor.second].visited = true;
+                    board[farNeighbor.first][farNeighbor.second].isHole = true;
+                    board[farLeftNeighbor.first][farLeftNeighbor.second].visited = true;
+                    board[farLeftNeighbor.first][farLeftNeighbor.second].isHole = true;
                 }
             }
         }
@@ -328,4 +339,8 @@ int main(int argc, char **argv)
             }
         }
     }
+    
+    #ifdef DEBUGSTUFF
+    debugStuff(true);
+    #endif
 }

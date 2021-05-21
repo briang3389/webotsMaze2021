@@ -8,7 +8,7 @@ Point centeredTextCoords(const char *s, int x, int y)
   Size ts = getTextSize(s, FONT_HERSHEY_PLAIN, 1, 1, &baseline);
   return Point(x-ts.width/2,y+ts.height/2);
 }
-void debugStuff() //each box is 30px
+void debugStuff(bool saveToFile=false) //each box is 30px
 {
 //todo: call this function whenever state variables are updated
 //that didnt change anything
@@ -26,10 +26,11 @@ void debugStuff() //each box is 30px
   Point textCoords3(150,600);
   //45-55
   const int startIndex=45;
-  const int endIndex=55;
+  const int endIndex=64;
   const int num=endIndex-startIndex+1;
   
-  Mat img = Mat( 700, 500, CV_8UC3, Scalar(255,255,255) );
+  //700 500
+  Mat img = Mat( 800, 800, CV_8UC3, Scalar(255,255,255) );
   //putText(img, "45", centeredTextCoords("45",5,100), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
   
   for(int i=startIndex,x=boxSize,y=0;i<=endIndex;i++,x+=boxSize)
@@ -96,6 +97,11 @@ void debugStuff() //each box is 30px
   //nvm you just need waitKey(1)
   //imwrite(string("/home/brian/tmpfs/")+to_string(time(0))+string(".png"), img);
   //cout<<"imshow "<<time(0)<<endl;
+  if(saveToFile)
+  {
+    imwrite(string("/home/brian/Desktop/map.png"), img);
+  }
+  
   
   if(false)
   {

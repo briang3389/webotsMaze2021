@@ -1,6 +1,6 @@
 //angle.h: deals with the angle the robot is at
 
-int direction = 1; //0 is up, 1 is right, 2 is down, 3 is left
+int direction = 0; //0 is up, 1 is right, 2 is down, 3 is left
 double angle = 1.5708 * direction; //angle the robot is at based on the Gyro sensor
 
 void updateGyro(int timeStep) { 

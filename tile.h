@@ -63,5 +63,5 @@ pair<int, int> bottomRight(pair<int, int> &startTile){
 }
 
 bool traversible(pair<int, int> &startTile){
-    return (boardLoc(startTile).open[0] && boardLoc(startTile).open[1] && boardLoc(topRight(startTile)).open[2] && boardLoc(topRight(startTile)).open[3]);
+    return (!boardLoc(startTile).isHole && !boardLoc(topLeft(startTile)).isHole && !boardLoc(topRight(startTile)).isHole && !boardLoc(bottomRight(startTile)).isHole && boardLoc(startTile).open[0] && boardLoc(startTile).open[1] && boardLoc(topRight(startTile)).open[2] && boardLoc(topRight(startTile)).open[3]);
 }

@@ -131,7 +131,6 @@ const int max_value_H = 360/2;
 const int max_value = 255;
 const String window_capture_name = "Video Capture";
 const String window_detection_name = "Object Detection";
-
 int low_H = 150, low_S = 60, low_V = 60;
 int high_H = max_value_H, high_S = max_value, high_V = max_value;
 int low_Hy = 0;
@@ -141,7 +140,6 @@ int PosZ;
   
 int thresh = 150;
 const int max_thresh = 255;
-
 //blur
 int DELAY_CAPTION = 1500;
 int DELAY_BLUR = 100;
@@ -202,13 +200,11 @@ char getLetter(double Values[3])
         return 'S';
     }
 }
-
 bool checkVisualVictim(Camera* cam)
 {
     namedWindow(window_capture_name);
     namedWindow(window_detection_name);
     Mat frame_HSV, frame_red, frame_yellow;
-
     Mat frame(cam->getHeight(), cam->getWidth(), CV_8UC4, (void*)cam->getImage());;
     
     if( frame.empty() )
@@ -228,7 +224,6 @@ bool checkVisualVictim(Camera* cam)
         imshow("red", frame_red);
         imshow("yellow", frame_yellow);
     waitKey(1);
-
     Mat canny_output;
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
@@ -325,7 +320,6 @@ bool checkVisualVictim(Camera* cam)
           waitKey(1);
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-
           if(top > 0.18 && top < 0.48 && mid > 0.22 && mid < 0.44 && bottom > 0.2 && bottom < 0.55)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
@@ -340,7 +334,6 @@ bool checkVisualVictim(Camera* cam)
               else{
                 changeMessage(PosX, PosZ, 'P');
               }
-
               return true;
           }
         }
@@ -376,6 +369,7 @@ bool checkVisualVictim(Camera* cam)
     }
     return false;
 }
+
 bool checkAllVictims(){return false;}
 
 string tileTypeStr;
