@@ -232,9 +232,9 @@ bool checkVisualVictim(Camera* cam)
     {
       cvtColor(frame,clone,COLOR_BGR2GRAY); //grayscale
       
-      //blur( clone, clone, Size(3,3) );
-      GaussianBlur(clone, clone, cv::Size(0, 0), 3);
-      addWeighted(clone, 1.5, clone, -0.5, 0, clone);
+      blur( clone, clone, Size(3,3) );
+      //GaussianBlur(clone, clone, cv::Size(0, 0), 3);
+      //addWeighted(clone, 1.5, clone, -0.5, 0, clone);
       threshold(clone,clone,thresh,max_thresh,THRESH_BINARY); //threshold
       imshow("thresh", clone);
       Mat inverted;
@@ -259,7 +259,6 @@ bool checkVisualVictim(Camera* cam)
         
         printf("width: %f, height: %f\n", width, height);
         printf("width/height: %f\n", width/height);
-        
         if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.1  && width/height > 0.9)
         {
           double area = 39*13;
@@ -320,13 +319,13 @@ bool checkVisualVictim(Camera* cam)
           waitKey(1);
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-          if(top > 0.18 && top < 0.48 && mid > 0.22 && mid < 0.44 && bottom > 0.2 && bottom < 0.55)//exclude noisy info
+          if(top > 0.18 && top < 0.5 && mid > 0.22 && mid < 0.46 && bottom > 0.2 && bottom < 0.6)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
               changeMessage(PosX, PosZ, getLetter(img));
               return true;
           }
-          else if(top > 0.5 && top < 0.88 && mid > 0.44 && mid < 0.62 && bottom > 0.5 && bottom < 0.88)
+          else if(top > 0.5 && top < 0.9 && mid > 0.46 && mid < 0.82 && bottom > 0.6)
           {
               if(bottom > 0.8){
                 changeMessage(PosX, PosZ, 'C');
