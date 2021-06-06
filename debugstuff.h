@@ -21,16 +21,16 @@ void debugStuff(bool saveToFile=false) //each box is 30px
   const int lineWidth=4;
   const int pitSize=22;
   const int robotSize=15;
-  const Point textCoords1(10,600);
-  Point textCoords2(10,500);
-  Point textCoords3(150,600);
+  const Point textCoords1(10,900);
+  Point textCoords2(10,800);
+  Point textCoords3(150,900);
   //45-55
   const int startIndex=45;
   const int endIndex=64;
   const int num=endIndex-startIndex+1;
   
   //700 500
-  Mat img = Mat( 800, 800, CV_8UC3, Scalar(255,255,255) );
+  Mat img = Mat( 1000, 800, CV_8UC3, Scalar(255,255,255) );
   //putText(img, "45", centeredTextCoords("45",5,100), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
   
   for(int i=startIndex,x=boxSize,y=0;i<=endIndex;i++,x+=boxSize)
@@ -59,14 +59,14 @@ void debugStuff(bool saveToFile=false) //each box is 30px
       if(!t.visited)
       {
         rectangle(img,Point(xx,yy),Point(xx+boxSize-1,yy+boxSize-1),Scalar(170,170,170),FILLED);
-        goto afterDrawStuff;
+        //goto afterDrawStuff;
       }
       if(!t.open[0]) rectangle(img,Point(xx,yy),Point(xx+boxSize-1,yy+lineWidth-1),Scalar(0,0,0),FILLED);
       if(!t.open[1]) rectangle(img,Point(xx+boxSize-lineWidth,yy),Point(xx+boxSize-1,yy+boxSize-1),Scalar(0,0,0),FILLED);
       if(!t.open[2]) rectangle(img,Point(xx,yy+boxSize-lineWidth),Point(xx+boxSize-1,yy+boxSize-1),Scalar(0,0,0),FILLED);
       if(!t.open[3]) rectangle(img,Point(xx,yy),Point(xx+lineWidth-1,yy+boxSize-1),Scalar(0,0,0),FILLED);
       if(t.isHole) rectangle(img,Point(cxx-pitSize/2,cyy-pitSize/2),Point(cxx+pitSize/2,cyy+pitSize/2),Scalar(0,0,0),FILLED);
-      afterDrawStuff:;
+      //afterDrawStuff:;
       if(x==currentCoords.first && y==currentCoords.second) rectangle(img,Point(cxx-robotSize/2,cyy-robotSize/2),Point(cxx+robotSize/2,cyy+robotSize/2),Scalar(255,0,0),FILLED);
     }
   }
@@ -90,7 +90,7 @@ void debugStuff(bool saveToFile=false) //each box is 30px
   (unsigned long long)(tv.tv_sec) * 1000 +
   (unsigned long long)(tv.tv_usec) / 1000;
   sprintf(bruh,"%llu",millisecondsSinceEpoch);
-  putText(img, bruh, Point(10,650), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
+  putText(img, bruh, Point(10,950), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
   imshow("debug",img); //WHY IS THIS DELAYED?? use time(0) to find out. print it to console and put it on the image
   waitKey(10);
   //ok so the img is being created fine but imshow is just garbage
