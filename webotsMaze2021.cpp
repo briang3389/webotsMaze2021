@@ -1,4 +1,7 @@
 #include "includes.h"
+
+int doTimeStep();
+
 #include "robot.h"
 #include "angle.h"
 #include "tile.h"
@@ -43,16 +46,17 @@ pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
 
 
-#include <debugstuff.h>
+//#include <debugstuff.h>
 
 
 int doTimeStep()
 {
   #ifdef DEBUGSTUFF
-    debugStuff();
+    //debugStuff();
   #endif
   int ret=robot->step(timeStep);
   updateGyro(timeStep);
+  //cout<<getAngle()<<endl;
   return ret;
 }
 
@@ -67,6 +71,8 @@ int main(int argc, char **argv)
   startingGPS.first = gps->getValues()[0];
   startingGPS.second = gps->getValues()[2];
   cout << "Starting GPS values: " << startingGPS.first << " " << startingGPS.second << endl;
+
+  orient(timeStep);
 
   int numLOP = 0;
   //angle = 0;
@@ -133,7 +139,7 @@ int main(int argc, char **argv)
       }
       cout<<endl;
       
-      angle=0.0;
+      //angle=0.0;
       direction=0;
       loc=getCoords();
       continue;
@@ -179,6 +185,7 @@ int main(int argc, char **argv)
                 {
                     doTimeStep();
                 }
+                boardLoc(getCoords()).victimChecked=true;
                 setMotors(1.5,-1.5);
                 while((int)getAngle()!=0)
                 {
@@ -307,8 +314,9 @@ int main(int argc, char **argv)
                     }
                 }
                 else {
-                    message[8] = 'E';
-                    emitter->send(message, 9);
+                    cout<<"send exit signal"<<endl;
+                    char exitMessage='E';
+                    emitter->send(&exitMessage,1);
                     break;
                 }
             }
@@ -354,7 +362,7 @@ int main(int argc, char **argv)
     #ifdef DEBUGSTUFF
     debugStuff(true);
     #endif
-    for(int i = 0; i < 50; i++)
+    for(int i = 0; i < 100; i++)
     {
       doTimeStep();
     }

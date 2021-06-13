@@ -13,6 +13,27 @@ pair<int, int> getCoords() {
     return newCoords;
 }
 
+void orient(int timeStep){
+    setMotors(1, 1);
+    for (int i = 0; i < 5; i++) robot->step(timeStep);
+    
+    double xValue= fabs(gps->getValues()[0] - startingGPS.first);
+    double yValue = fabs(gps->getValues()[2] - startingGPS.second);
+    
+    if (xValue > yValue){
+        if (gps->getValues()[0] > startingGPS.first) direction = 1;
+        else direction = 3;
+    }
+    else{
+        if (gps->getValues()[2] > startingGPS.second) direction = 2;
+        else direction = 0;
+    }
+    angle = 1.5708 * direction;
+    setMotors(-1, -1);
+    for (int i = 0; i < 5; i++) robot->step(timeStep);
+    setMotors(0, 0);
+}
+
 double getDeltaTarget(pair<int, int> targetCoordinates) {
     //find the maximum GPS distance in a cardinal direction from current location to a certain coordinate
     //for example, if the function is called from (0,0) with target (-100, 1), it'll return 100 converted into GPS distance
@@ -87,8 +108,8 @@ void wallScan(int timeStep){
     }
     bool leftSide = false, frontSide = false, rightSide = false;
     setMotors(-3, 3);
-    while (robot->step(timeStep) != -1 && ctr < scanningMax) {
-        updateGyro(timeStep);
+    while (doTimeStep() != -1 && ctr < scanningMax) {
+        
         if (infrared[1]->getValue() < paraThreshold) leftSide = true;
         if (infrared[6]->getValue() < paraThreshold) rightSide = true;
         if (infrared[4]->getValue() < paraThreshold) frontSide = true;
@@ -96,7 +117,8 @@ void wallScan(int timeStep){
         ctr++;
     }
     setMotors(3, -3);
-    while (robot->step(timeStep) != -1 && (fabs(getAngle() - startScan) > 1.5 )) {updateGyro(timeStep);}
+    //change 1.5 to 3 to fix spin issue
+    while (doTimeStep() != -1 && (fabs(getAngle() - startScan) > 3 )) {;}
     setMotors(0, 0);
     
     
@@ -202,6 +224,11 @@ char getLetter(double Values[3])
 }
 bool checkVisualVictim(Camera* cam)
 {
+    if(boardLoc(getCoords()).victimChecked)
+    {
+      return false;
+    }
+    
     namedWindow(window_capture_name);
     namedWindow(window_detection_name);
     Mat frame_HSV, frame_red, frame_yellow;
@@ -257,8 +284,8 @@ bool checkVisualVictim(Camera* cam)
         double width = (double)roi.width;
         double height = (double)roi.height;
         
-        printf("width: %f, height: %f\n", width, height);
-        printf("width/height: %f\n", width/height);
+        //printf("width: %f, height: %f\n", width, height);
+        //printf("width/height: %f\n", width/height);
         if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.08  && width/height > 0.93)
         {
           double area = 39*13;
@@ -325,7 +352,7 @@ bool checkVisualVictim(Camera* cam)
               changeMessage(PosX, PosZ, getLetter(img));
               return true;
           }
-          else if(top > 0.5 && top < 0.9 && mid > 0.46 && mid < 0.82 && bottom > 0.6)
+          else if(top > 0.5 && top < 0.9 && mid > 0.46 && bottom > 0.6)
           {
               if(bottom > 0.8){
                 if(bottom > 1.1)
@@ -424,3 +451,4 @@ int getTileType(const unsigned char* img)
 bool checkHole(){
     return getTileType(colorCam->getImage()) == 2;
 }
+
