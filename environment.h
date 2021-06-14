@@ -352,7 +352,7 @@ bool checkVisualVictim(Camera* cam)
               changeMessage(PosX, PosZ, getLetter(img));
               return true;
           }
-          else if(top > 0.5 && top < 0.9 && mid > 0.6 && bottom > 0.6)
+          else if(top > 0.5 && top < 0.9 && mid > 0.7 && bottom > 0.6)
           {
               if(bottom > 0.8){
                 if(bottom > 1.1)
