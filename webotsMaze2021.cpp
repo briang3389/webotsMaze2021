@@ -84,8 +84,6 @@ int main(int argc, char **argv)
   {
       if(rec->getQueueLength() > 0 || doLOPstuff) //lack of progress just happened
       {
-        doLOPstuff=false;
-        
         cout<<"LOP "<< ++numLOP <<endl;
         if(rec->getQueueLength()>0)
         {
@@ -139,9 +137,10 @@ int main(int argc, char **argv)
       }
       cout<<endl;
       
-      //angle=0.0;
+      if(!doLOPstuff)angle=0.0;
       direction=0;
       loc=getCoords();
+      doLOPstuff=false;
       continue;
     }
     if(resetMapForLOP) //STILL NEED TO TEST (including if LOP happens before any checkpoint is hit)
