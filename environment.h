@@ -173,8 +173,8 @@ char getLetter(double Values[3])
 {
     //{top, mid, bottom}
     double Data[3][3] = {{0.240769, 0.344477, 0.296548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
-                        {0.299527, 0.300079, 0.328974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
-                        {0.282051, 0.258107, 0.313748}}; //Sdata top: 0.302051, mid: 0.278107, bottom: 0.343748
+                        {0.299527, 0.300079, 0.338974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
+                        {0.292051, 0.288107, 0.313748}}; //Sdata top: 0.301775, mid: 0.299803, bot: 0.323471
     
     //{mid-top, mid-bottom, bottom-top}
     double diffs[3][3];
@@ -346,13 +346,13 @@ bool checkVisualVictim(Camera* cam)
           
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-          if(top > 0.18 && top < 0.5 && mid > 0.22 && mid < 0.46 && bottom > 0.2 && bottom < 0.6)//exclude noisy info
+          if(top > 0.18 && top < 0.5 && mid > 0.22 && mid < 0.6 && bottom > 0.2 && bottom < 0.6)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
               changeMessage(PosX, PosZ, getLetter(img));
               return true;
           }
-          else if(top > 0.5 && top < 0.9 && mid > 0.46 && bottom > 0.6)
+          else if(top > 0.5 && top < 0.9 && mid > 0.6 && bottom > 0.6)
           {
               if(bottom > 0.8){
                 if(bottom > 1.1)
