@@ -174,7 +174,7 @@ char getLetter(double Values[3])
     //{top, mid, bottom}
     double Data[3][3] = {{0.240769, 0.344477, 0.296548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
                         {0.299527, 0.300079, 0.338974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
-                        {0.292051, 0.288107, 0.313748}}; //Sdata top: 0.301775, mid: 0.299803, bot: 0.323471
+                        {0.302051, 0.298107, 0.313748}}; //Sdata top: 0.301775, mid: 0.299803, bot: 0.323471
     
     //{mid-top, mid-bottom, bottom-top}
     double diffs[3][3];
