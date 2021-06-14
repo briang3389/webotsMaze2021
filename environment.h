@@ -451,4 +451,3 @@ int getTileType(const unsigned char* img)
 bool checkHole(){
     return getTileType(colorCam->getImage()) == 2;
 }
-

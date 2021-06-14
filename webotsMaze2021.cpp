@@ -78,7 +78,15 @@ int main(int argc, char **argv)
   //angle = 0;
   
   wallScan(timeStep);
-  //printBoard();
+  
+  setMotors(1.5,-1.5);
+  while((int)getAngle()!=(direction*90+180)%360)
+  {
+      doTimeStep();
+  }
+  setMotors(0,0);
+  
+  wallScan(timeStep);
 
   while(doTimeStep() != -1)
   {
@@ -271,9 +279,16 @@ int main(int argc, char **argv)
                     setMotors(-motorSpeed / 2, -motorSpeed / 2);
                     board[targetTile.first][targetTile.second].visited = true;
                     pair<int, int> neighborThing = neighborTile(targetTile, direction);
-                    pair<int, int> leftNeighbor = neighborTile(neighborThing, (direction + 3) % 4);
+                    if(direction==2||direction==3)
+                    {
+                      neighborThing=targetTile;
+                    }
+                    pair<int, int> leftNeighbor = neighborTile(neighborThing, (direction + 1) % 4);
                     pair<int, int> farNeighbor = neighborTile(neighborThing, direction);
                     pair<int, int> farLeftNeighbor = neighborTile(leftNeighbor, direction);
+                    
+                    cout<<neighborThing.first<<" "<<neighborThing.second<<"    "<<leftNeighbor.first<<" "<<leftNeighbor.second<<"    "<<farNeighbor.first<<" "<<farNeighbor.second<<"    "<<farLeftNeighbor.first<<" "<<farLeftNeighbor.second<<endl;
+                    
                     board[neighborThing.first][neighborThing.second].visited = true;
                     board[neighborThing.first][neighborThing.second].isHole = true;
                     board[leftNeighbor.first][leftNeighbor.second].visited = true;
@@ -282,6 +297,10 @@ int main(int argc, char **argv)
                     board[farNeighbor.first][farNeighbor.second].isHole = true;
                     board[farLeftNeighbor.first][farLeftNeighbor.second].visited = true;
                     board[farLeftNeighbor.first][farLeftNeighbor.second].isHole = true;
+                    
+                    #ifdef DEBUGSTUFF
+                    debugStuff();
+                    #endif
                 }
             }
         }
