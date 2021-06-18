@@ -148,11 +148,11 @@ double motorMax(){
     return min(leftMotor->getMaxVelocity(), rightMotor->getMaxVelocity());
 }
 
-
 const int max_value_H = 360/2;
 const int max_value = 255;
 const String window_capture_name = "Video Capture";
 const String window_detection_name = "Object Detection";
+
 int low_H = 150, low_S = 60, low_V = 60;
 int high_H = max_value_H, high_S = max_value, high_V = max_value;
 int low_Hy = 0;
@@ -160,8 +160,9 @@ int high_Hy = 40;
 int PosX;
 int PosZ;
   
-int thresh = 150;
+int thresh = 192;
 const int max_thresh = 255;
+
 //blur
 int DELAY_CAPTION = 1500;
 int DELAY_BLUR = 100;
@@ -172,13 +173,16 @@ int display_dst( int delay );
 char getLetter(double Values[3])
 {
     //{top, mid, bottom}
-    double Data[3][3] = {{0.240769, 0.344477, 0.296548}, //Hdata top: 0.230769, mid: 0.394477, bottom: 0.246548
-                        {0.299527, 0.300079, 0.338974},  //Udata top: 0.258383, mid: 0.280079, bottom: 0.337278
-                        {0.302051, 0.298107, 0.313748}}; //Sdata top: 0.301775, mid: 0.299803, bot: 0.323471
-    
+    double Data[6][3] = {{0.159763, 0.230769, 0.191321}, //Hdata top: 0.159763, mid: 0.230769, bot: 0.191321
+                        {0.230769, 0.333333, 0.349112},  //Udata top: 0.177515, mid: 0.252465, bot: 0.094675
+                        {0.177515, 0.252465, 0.094675},  //Udata2 top: 0.177515, mid: 0.252465, bot: 0.094675
+                        {0.112426, 0.106509, 0.161736},  //Sdata top: 0.112426, mid: 0.106509, bot: 0.161736
+                        {0.595661, 0.439625, 0.651854},  //C top: 0.595661, mid: 0.169625, bot: 0.581854
+                        {0.558974, 0.208521, 0.558560}}; //P top: 0.408974, mid: 0.248521, bot: 0.408560
+   
     //{mid-top, mid-bottom, bottom-top}
-    double diffs[3][3];
-    for(int n = 0; n < 3; n++)
+    double diffs[6][3];
+    for(int n = 0; n < 6; n++)
     {
         diffs[n][0] = 10*(Data[n][1] - Data[n][0]);
         diffs[n][1] = 10*(Data[n][1] - Data[n][2]);
@@ -187,8 +191,8 @@ char getLetter(double Values[3])
     double valDiffs[3] = {10*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
 //    printf("valDiffs %f, %f, %f\n", valDiffs[0], valDiffs[1], valDiffs[2]);
     
-    double dist[3] = { 0 };
-    for(int n = 0; n < 3; n++)
+    double dist[6] = { 0 };
+    for(int n = 0; n < 6; n++)
     {
         for(int i = 0; i < 3; i++)
         {
@@ -196,11 +200,11 @@ char getLetter(double Values[3])
         }
 //        dist[n] = sqrt(dist[n]);
     }
-    for(int n = 0; n < 3; n++)
+    for(int n = 0; n < 6; n++)
     {
         for(int i = 0; i < 3; i++)
         {
-            dist[n] += (valDiffs[i]-diffs[n][i])*(valDiffs[i]-diffs[n][i]);
+            dist[n] += 2*(valDiffs[i]-diffs[n][i])*(valDiffs[i]-diffs[n][i]);
         }
         dist[n] = sqrt(dist[n]);
     }
@@ -209,26 +213,36 @@ char getLetter(double Values[3])
         letter = 1;
     if(dist[2] < dist[letter])
         letter = 2;
+    if(dist[3] < dist[letter])
+        letter = 3;
+    if(dist[4] < dist[letter])
+        letter = 4;
+    if(dist[5] < dist[letter])
+        letter = 4;
     if(letter == 0){//Closest to H    
         printf("H victim\n");
         return 'H';
     }
-    else if(letter == 1){//Closest to U 
+    else if(letter == 1 || letter == 2){//Closest to U 
         printf("U victim\n");
         return 'U';
     }
-    else{//Closest to S
+    else if(letter == 3){//Closest to S
         printf("S victim\n");
         return 'S';
     }
+    else if(letter == 4){//Closest to C
+        printf("C victim\n");
+        return 'C';
+    }
+    else{//Closest to P
+        printf("P victim\n");
+        return 'P';
+    }
 }
+
 bool checkVisualVictim(Camera* cam)
 {
-    if(boardLoc(getCoords()).victimChecked)
-    {
-      return false;
-    }
-    
     namedWindow(window_capture_name);
     namedWindow(window_detection_name);
     Mat frame_HSV, frame_red, frame_yellow;
@@ -259,21 +273,22 @@ bool checkVisualVictim(Camera* cam)
     {
       cvtColor(frame,clone,COLOR_BGR2GRAY); //grayscale
       
-      blur( clone, clone, Size(3,3) );
-      //GaussianBlur(clone, clone, cv::Size(0, 0), 3);
-      //addWeighted(clone, 1.5, clone, -0.5, 0, clone);
+      //blur( clone, clone, Size(3,3) );
+//      Mat inverted;
+      bitwise_not ( clone, clone );
+      GaussianBlur(clone, clone, cv::Size(0, 0), 0.5);
+      addWeighted(clone, 1.5, clone, -0.5, 0, clone);
+      imshow("blured", clone);
+      bitwise_not ( clone, clone );
+
       threshold(clone,clone,thresh,max_thresh,THRESH_BINARY); //threshold
       imshow("thresh", clone);
-      Mat inverted;
-      bitwise_not ( clone, inverted );
-      imshow("inverted", inverted);
       Mat canny_output;
       vector<vector<Point>> contours;
       vector<vector<Point>> invContours;
       vector<Vec4i> hierarchy;
       
       findContours( clone, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
-      findContours( inverted, invContours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE );
       for( size_t i = 0; i < contours.size(); i++ )
       {
         Scalar color = Scalar( 0, 255, 255);
@@ -284,24 +299,25 @@ bool checkVisualVictim(Camera* cam)
         double width = (double)roi.width;
         double height = (double)roi.height;
         
-        //printf("width: %f, height: %f\n", width, height);
-        //printf("width/height: %f\n", width/height);
-        if(width < 170 && width > 55 && height < 170 && height > 55 && width/height < 1.08  && width/height > 0.93)
+        // printf("width: %f, height: %f\n", width, height);
+        // printf("width/height: %f\n", width/height);
+
+        if(width < 120 && width > 25 && height < 120 && height > 25 && width/height < 1.2  &&  width/height > 0.66)
         {
           double area = 39*13;
-          rectangle(clone,roi, color,1);
-          Mat crop = clone(roi);
+          rectangle(frame, roi, color,1);
+          Mat crop = frame(roi);
           Mat reCrop;
           resize(crop, reCrop, Size(), 45.0*3/width, 45.0/height);
-       
+          reCrop = reCrop(Rect(9, 3, 39*3, 39));
           imshow("reCrop", reCrop);
-          Rect slicet(9, 3, 39*3, 13);
+          Rect slicet(0, 0, 39*3, 13);
           Mat slice1 = reCrop(slicet);
           imshow("slice1", slice1);
-          Rect slicemh(9, 16, 39*3, 13);
+          Rect slicemh(0, 13, 39*3, 13);
           Mat slice2 = reCrop(slicemh);
           imshow("slice2", slice2);
-          Rect sliceb(9, 29, 39*3, 13);
+          Rect sliceb(0, 26, 39*3, 13);
           Mat slice3 = reCrop(sliceb);
           imshow("slice3", slice3);
           
@@ -311,32 +327,32 @@ bool checkVisualVictim(Camera* cam)
           double top = 0;
           double mid = 0;
           double bottom = 0;
-  
-          for(int y = 0; y < 42; y++)//get horizontal slices
+          int valThresh = 140;
+          for(int y = 0; y < 39; y++)//get horizontal slices
           {
-            if(y<14){
-              for(int x = 0; x < 42; x++)
+            if(y<13){
+              for(int x = 0; x < 39; x++)
               {
                 t = reCrop.at<Vec3b>(Point(x, y));
-                if(t.val[0] < thresh){
+                if(t.val[0] < valThresh){
                   top+=(1/area);
                 }
               }
             }
-            else if(y<28){
-              for(int x = 0; x < 42; x++)
+            else if(y<26){
+              for(int x = 0; x < 39; x++)
               {
                 m = reCrop.at<Vec3b>(Point(x, y));
-                if(m.val[0] < thresh){
+                if(m.val[0] < valThresh){
                   mid+=(1/area);
                 }
               }
             }
-            else if(y<42){
-              for(int x = 0; x < 42; x++)
+            else if(y<39){
+              for(int x = 0; x < 39; x++)
               {
                 b = reCrop.at<Vec3b>(Point(x, y));
-                if(b.val[0] < thresh){
+                if(b.val[0] < valThresh){
                   bottom+=(1/area);
                 }
               }
@@ -346,23 +362,10 @@ bool checkVisualVictim(Camera* cam)
           
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-          if(top > 0.18 && top < 0.5 && mid > 0.22 && mid < 0.6 && bottom > 0.2 && bottom < 0.6)//exclude noisy info
+         if(top > 0 && top < 0.9 && mid > 0 && mid < 0.8 && bottom > 0 && bottom < 0.9)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
               changeMessage(PosX, PosZ, getLetter(img));
-              return true;
-          }
-          else if(top > 0.5 && top < 0.9 && mid > 0.7 && bottom > 0.6)
-          {
-              if(bottom > 0.8){
-                if(bottom > 1.1)
-                  changeMessage(PosX, PosZ, 'C');
-                else
-                  return false;
-              }
-              else{
-                changeMessage(PosX, PosZ, 'P');
-              }
               return true;
           }
         }
@@ -378,10 +381,8 @@ bool checkVisualVictim(Camera* cam)
         double width = (double)roi.width;
         double height = (double)roi.height;
         
-        if(width > 40 && width < 100 && height > 20 && height < 100 && (width/height > 0.9 && width/height < 2.1))
+        if(width > 30 && width < 100 && height > 15 && height < 100 && (width/height > 0.9 && width/height < 2.1))
         {
-          printf("width: %f, height: %f\n", width, height);
-          printf("width/height: %f\n", width/height);
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
         
