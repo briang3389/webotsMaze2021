@@ -438,6 +438,11 @@ int getTileType(const unsigned char* img)
       str="purple";
       ret=5;
     }
+    else if(r>170&&r<178 && g>136&&g<144 && b>74&&b<82) //+-4 from 174 140 78
+    {
+      str="swamp";
+      ret=6;
+    }
     else
     {
       str="normal";
