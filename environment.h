@@ -404,7 +404,7 @@ bool checkAllVictims(){return false;}
 
 string tileTypeStr;
 int getTileType(const unsigned char* img)
-{ //0normal 1checkpoint 2pit 3red 4blue 5purple
+{ //0normal 1checkpoint 2pit 3red 4blue 5purple 6swamp
 
     int r=Camera::imageGetRed(img,1,0,0);
     int g=Camera::imageGetGreen(img,1,0,0);
