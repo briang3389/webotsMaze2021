@@ -298,12 +298,12 @@ bool checkVisualVictim(Camera* cam)
         imshow("conts", clone);
         double width = (double)roi.width;
         double height = (double)roi.height;
-        
-        // printf("width: %f, height: %f\n", width, height);
-        // printf("width/height: %f\n", width/height);
 
-        if(width < 120 && width > 25 && height < 120 && height > 25 && width/height < 1.2  &&  width/height > 0.66)
+        if(width < 120 && width > 40 && height < 120 && height > 40 && width/height < 1.2  &&  width/height > 0.66)
         {
+          printf("width: %f, height: %f\n", width, height);
+          printf("width/height: %f\n", width/height);
+
           double area = 39*13;
           rectangle(frame, roi, color,1);
           Mat crop = frame(roi);
@@ -327,7 +327,7 @@ bool checkVisualVictim(Camera* cam)
           double top = 0;
           double mid = 0;
           double bottom = 0;
-          int valThresh = 140;
+          int valThresh = 120;
           for(int y = 0; y < 39; y++)//get horizontal slices
           {
             if(y<13){
@@ -362,7 +362,7 @@ bool checkVisualVictim(Camera* cam)
           
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-         if(top > 0 && top < 0.9 && mid > 0 && mid < 0.8 && bottom > 0 && bottom < 0.9)//exclude noisy info
+         if(top > 0.02 && top < 0.9 && mid > 0.04 && mid < 0.8 && bottom > 0.02 && bottom < 0.9)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
               changeMessage(PosX, PosZ, getLetter(img));
