@@ -23,7 +23,7 @@ bool& visualChecking = statesArr[6];
 
 //constants
 const double motorSpeed = 5.0;
-const double stoppingConst = 275.0;
+const double stoppingConst = 100;
 
 //movement variables
 double turnTarget = 0.0;
