@@ -301,9 +301,8 @@ bool checkVisualVictim(Camera* cam)
 
         if(width < 120 && width > 40 && height < 120 && height > 40 && width/height < 1.2  &&  width/height > 0.66)
         {
-          printf("width: %f, height: %f\n", width, height);
-          printf("width/height: %f\n", width/height);
-
+          //printf("width: %f, height: %f\n", width, height);
+          //printf("width/height: %f\n", width/height);
           double area = 39*13;
           rectangle(frame, roi, color,1);
           Mat crop = frame(roi);
@@ -358,7 +357,7 @@ bool checkVisualVictim(Camera* cam)
               }
             } 
           }
-          printf("top: %f, mid: %f, bot: %f\n", top, mid, bottom);
+          //printf("top: %f, mid: %f, bot: %f\n", top, mid, bottom);
           
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
