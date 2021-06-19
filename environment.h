@@ -173,6 +173,14 @@ double motorMax(){
     return min(leftMotor->getMaxVelocity(), rightMotor->getMaxVelocity());
 }
 
+void placeVictim(Camera* cam, char letter)
+{
+    if(cam == robot->getCamera("rCam"))
+        boardLoc(loc).open[(direction+1) % 4] = letter;
+    else
+        boardLoc(loc).open[(direction+3) % 4] = letter;
+}
+
 const int max_value_H = 360/2;
 const int max_value = 255;
 const String window_capture_name = "Video Capture";
@@ -198,16 +206,17 @@ int display_dst( int delay );
 char getLetter(double Values[3])
 {
     //{top, mid, bottom}
-    double Data[6][3] = {{0.159763, 0.230769, 0.191321}, //Hdata top: 0.159763, mid: 0.230769, bot: 0.191321
+    double Data[7][3] = {{0.159763, 0.230769, 0.191321}, //Hdata top: 0.159763, mid: 0.230769, bot: 0.191321
                         {0.230769, 0.333333, 0.349112},  //Udata top: 0.177515, mid: 0.252465, bot: 0.094675
                         {0.177515, 0.252465, 0.094675},  //Udata2 top: 0.177515, mid: 0.252465, bot: 0.094675
                         {0.112426, 0.106509, 0.161736},  //Sdata top: 0.112426, mid: 0.106509, bot: 0.161736
                         {0.595661, 0.439625, 0.651854},  //C top: 0.595661, mid: 0.169625, bot: 0.581854
+                        {0.429980, 0.532544, 0.641026},  //C2 top: 0.429980, mid: 0.532544, bot: 0.641026
                         {0.558974, 0.208521, 0.558560}}; //P top: 0.408974, mid: 0.248521, bot: 0.408560
    
     //{mid-top, mid-bottom, bottom-top}
-    double diffs[6][3];
-    for(int n = 0; n < 6; n++)
+    double diffs[7][3];
+    for(int n = 0; n < 7; n++)
     {
         diffs[n][0] = 10*(Data[n][1] - Data[n][0]);
         diffs[n][1] = 10*(Data[n][1] - Data[n][2]);
@@ -216,8 +225,8 @@ char getLetter(double Values[3])
     double valDiffs[3] = {10*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
 //    printf("valDiffs %f, %f, %f\n", valDiffs[0], valDiffs[1], valDiffs[2]);
     
-    double dist[6] = { 0 };
-    for(int n = 0; n < 6; n++)
+    double dist[7] = { 0 };
+    for(int n = 0; n < 7; n++)
     {
         for(int i = 0; i < 3; i++)
         {
@@ -225,7 +234,7 @@ char getLetter(double Values[3])
         }
 //        dist[n] = sqrt(dist[n]);
     }
-    for(int n = 0; n < 6; n++)
+    for(int n = 0; n < 7; n++)
     {
         for(int i = 0; i < 3; i++)
         {
@@ -244,6 +253,9 @@ char getLetter(double Values[3])
         letter = 4;
     if(dist[5] < dist[letter])
         letter = 5;
+    if(dist[6] < dist[letter])
+        letter = 6;
+        
     if(letter == 0){//Closest to H    
         printf("H victim\n");
         return 'H';
@@ -256,7 +268,7 @@ char getLetter(double Values[3])
         printf("S victim\n");
         return 'S';
     }
-    else if(letter == 4){//Closest to C
+    else if(letter == 4 || letter == 5){//Closest to C
         printf("C victim\n");
         return 'C';
     }
