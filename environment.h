@@ -173,12 +173,12 @@ int display_dst( int delay );
 char getLetter(double Values[3])
 {
     //{top, mid, bottom}
-    double Data[6][3] = {{0.159763, 0.230769, 0.191321}, //Hdata top: 0.159763, mid: 0.230769, bot: 0.191321
+    double Data[6][3] = {{0.159763, 0.230769, 0.191321}, //Hdata top: 0.017751, mid: 0.025641, bot: 0.021696
                         {0.230769, 0.333333, 0.349112},  //Udata top: 0.177515, mid: 0.252465, bot: 0.094675
                         {0.177515, 0.252465, 0.094675},  //Udata2 top: 0.177515, mid: 0.252465, bot: 0.094675
                         {0.112426, 0.106509, 0.161736},  //Sdata top: 0.112426, mid: 0.106509, bot: 0.161736
-                        {0.595661, 0.439625, 0.651854},  //C top: 0.595661, mid: 0.169625, bot: 0.581854
-                        {0.558974, 0.208521, 0.558560}}; //P top: 0.408974, mid: 0.248521, bot: 0.408560
+                        {0.695661, 0.539625, 0.751854},  //C top: 0.595661, mid: 0.169625, bot: 0.581854
+                        {0.658777, 0.208521, 0.558560}}; //P top: 0.658777, mid: 0.193294, bot: 0.672584
    
     //{mid-top, mid-bottom, bottom-top}
     double diffs[6][3];
@@ -188,7 +188,7 @@ char getLetter(double Values[3])
         diffs[n][1] = 10*(Data[n][1] - Data[n][2]);
         diffs[n][2] = 10*(Data[n][2] - Data[n][0]);
     }
-    double valDiffs[3] = {10*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
+    double valDiffs[3] = {20*(Values[1] - Values[0]), 10*(Values[1] - Values[2]), 10*(Values[2] - Values[0])};
 //    printf("valDiffs %f, %f, %f\n", valDiffs[0], valDiffs[1], valDiffs[2]);
     
     double dist[6] = { 0 };
@@ -218,7 +218,7 @@ char getLetter(double Values[3])
     if(dist[4] < dist[letter])
         letter = 4;
     if(dist[5] < dist[letter])
-        letter = 4;
+        letter = 5;
     if(letter == 0){//Closest to H    
         printf("H victim\n");
         return 'H';
@@ -368,6 +368,8 @@ bool checkVisualVictim(Camera* cam)
               changeMessage(PosX, PosZ, getLetter(img));
               return true;
           }
+          else
+              return false;
         }
       }
     }
