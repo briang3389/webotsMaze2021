@@ -326,7 +326,7 @@ bool checkVisualVictim(Camera* cam)
           double top = 0;
           double mid = 0;
           double bottom = 0;
-          int valThresh = 120;
+          int valThresh = 140;
           for(int y = 0; y < 39; y++)//get horizontal slices
           {
             if(y<13){
