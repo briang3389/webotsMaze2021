@@ -25,11 +25,13 @@ void debugStuff(bool saveToFile=false) //each box is 30px
   Point textCoords2(10,800);
   Point textCoords3(150,900);
   //45-55
+  //45-64
   const int startIndex=45;
   const int endIndex=64;
   const int num=endIndex-startIndex+1;
   
   //700 500
+  //1000,800
   Mat img = Mat( 1000, 800, CV_8UC3, Scalar(255,255,255) );
   //putText(img, "45", centeredTextCoords("45",5,100), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,0));
   

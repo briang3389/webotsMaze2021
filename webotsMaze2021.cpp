@@ -46,7 +46,7 @@ pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
 
 
-//#include <debugstuff.h>
+//#include "debugstuff.h"
 
 
 int doTimeStep()
@@ -73,6 +73,7 @@ int main(int argc, char **argv)
   cout << "Starting GPS values: " << startingGPS.first << " " << startingGPS.second << endl;
 
   orient(timeStep);
+  cout << "Done Orienting!" << endl;
 
   int numLOP = 0;
   //angle = 0;
@@ -85,6 +86,8 @@ int main(int argc, char **argv)
       doTimeStep();
   }
   setMotors(0,0);
+  
+  direction = (direction + 2) % 4;
   
   wallScan(timeStep);
 
@@ -105,7 +108,7 @@ int main(int argc, char **argv)
       advancing = false;
       stopping = false;
       reversing = false;
-      ending = false;
+      ending = false;//if(!doLOPstuff)
       skipTurn = false;
       visualChecking = false;
       
@@ -119,8 +122,8 @@ int main(int argc, char **argv)
       rightMotor->setVelocity(0);
       leftMotor->setVelocity(0);
       //angle=0.0;
-      while(steps.size()>0)steps.pop();
-      while(bfsQueue.size()>0)bfsQueue.pop();
+      while(steps.size()>0)steps.pop();//if(!doLOPstuff)
+      while(bfsQueue.size()>0)bfsQueue.pop();//if(!doLOPstuff)
       //change position to last visited checkpoint (or start tile)
       //loc=getCoords(); //this uses gps so manually keeping track of checkpoint locations is not necessary
       
@@ -211,12 +214,13 @@ int main(int argc, char **argv)
 
         //reverse out of hole
         else if (reversing) {
+            
             if (direction == 0 || direction == 2) {
-                if (fabs(gps->getValues()[2] - startOfMoveGPS) < .01) reversing = false;
+                if (fabs(gps->getValues()[2] - startOfMoveGPS) < .002) reversing = false;
 
             }
             if (direction == 1 || direction == 3) {
-                if (fabs(gps->getValues()[0] - startOfMoveGPS) < .01) reversing = false;
+                if (fabs(gps->getValues()[0] - startOfMoveGPS) < .002) reversing = false;
             }
         }
 
@@ -226,10 +230,10 @@ int main(int argc, char **argv)
                 moveStart = make_pair(gps->getValues()[0], gps->getValues()[2]);
                 skipTurn = false;
                 turning = false;
-                setMotors(min(motorMax(), motorSpeed), min(motorMax(), motorSpeed));
-                targetAngle = roundAngle(getAngle());
                 if (direction == 0 || direction == 2) startOfMoveGPS = gps->getValues()[2];
                 else startOfMoveGPS = gps->getValues()[0];
+                setMotors(min(motorMax(), motorSpeed), min(motorMax(), motorSpeed));
+                targetAngle = roundAngle(getAngle());
             }
             else {
                 if (checkVisualVictim(camR) || checkVisualVictim(camL)) {
@@ -279,10 +283,9 @@ int main(int argc, char **argv)
                     setMotors(-motorSpeed / 2, -motorSpeed / 2);
                     board[targetTile.first][targetTile.second].visited = true;
                     pair<int, int> neighborThing = neighborTile(targetTile, direction);
-                    if(direction==2||direction==3)
-                    {
-                      neighborThing=targetTile;
-                    }
+                    if(direction==1) neighborThing = neighborTile(neighborThing, 0);
+                    if(direction==2) neighborThing = neighborTile(targetTile, 1);
+                    if (direction==3) neighborThing=targetTile;
                     pair<int, int> leftNeighbor = neighborTile(neighborThing, (direction + 1) % 4);
                     pair<int, int> farNeighbor = neighborTile(neighborThing, direction);
                     pair<int, int> farLeftNeighbor = neighborTile(leftNeighbor, direction);
@@ -297,10 +300,6 @@ int main(int argc, char **argv)
                     board[farNeighbor.first][farNeighbor.second].isHole = true;
                     board[farLeftNeighbor.first][farLeftNeighbor.second].visited = true;
                     board[farLeftNeighbor.first][farLeftNeighbor.second].isHole = true;
-                    
-                    #ifdef DEBUGSTUFF
-                    debugStuff();
-                    #endif
                 }
             }
         }
@@ -309,11 +308,14 @@ int main(int argc, char **argv)
         else {
             if (!board[loc.first][loc.second].visited) {
                 wallScan(timeStep);
+                #ifdef DEBUGSTUFF
+                debugStuff();
+                #endif
             }
             if (steps.empty()) {
                 if (!ending) {
                     pair<int, int> tempPair = runBFS(loc);
-                    //cout << "Finished BFS!" << endl;
+                    cout << "Finished BFS!" <<tempPair.first<<" "<<tempPair.second<< endl;
                     while (tempPair != loc && tempPair.first != -1) {
                         steps.push(tempPair);
                         tempPair = boardParents[tempPair.first][tempPair.second];
@@ -333,6 +335,9 @@ int main(int argc, char **argv)
                 }
                 else {
                     cout<<"send exit signal"<<endl;
+                    
+                    doMapCSV();
+                    
                     char exitMessage='E';
                     emitter->send(&exitMessage,1);
                     break;
@@ -365,11 +370,11 @@ int main(int argc, char **argv)
                     cout << "Heading straight" << endl;
                     
                     moveStart = make_pair(gps->getValues()[0], gps->getValues()[2]);
-                    setMotors(min(motorMax(), motorSpeed), min(motorMax(), motorSpeed));
                     targetAngle = roundAngle(getAngle());
                     if (direction == 0 || direction == 2) startOfMoveGPS = gps->getValues()[2];
                     else startOfMoveGPS = gps->getValues()[0];
                     cout << "Target angle: " << targetAngle << endl;
+                    setMotors(min(motorMax(), motorSpeed), min(motorMax(), motorSpeed));
                 }
                 //printBoard();
                 direction = getDirVal;
@@ -380,7 +385,7 @@ int main(int argc, char **argv)
     #ifdef DEBUGSTUFF
     debugStuff(true);
     #endif
-    for(int i = 0; i < 100; i++)
+    for(int i = 0; i < 50; i++)
     {
       doTimeStep();
     }

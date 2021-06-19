@@ -65,3 +65,127 @@ pair<int, int> bottomRight(pair<int, int> &startTile){
 bool traversible(pair<int, int> &startTile){
     return (!boardLoc(startTile).isHole && !boardLoc(topLeft(startTile)).isHole && !boardLoc(topRight(startTile)).isHole && !boardLoc(bottomRight(startTile)).isHole && boardLoc(startTile).open[0] && boardLoc(startTile).open[1] && boardLoc(topRight(startTile)).open[2] && boardLoc(topRight(startTile)).open[3]);
 }
+
+
+const Tile defaultTile=board[0][0];
+
+bool tilesEqual(Tile t1, Tile t2)
+{
+  return t1.open[0]==t2.open[0] && t1.open[1]==t2.open[1] && t1.open[2]==t2.open[2] && t1.open[3]==t2.open[3] && t1.visited==t2.visited && t1.isHole==t2.isHole && t1.victimChecked==t2.victimChecked;
+}
+
+bool isBlankCol(int x)
+{
+  for(int tmpy=0;tmpy<boardSize;tmpy++)
+  {
+    if(!tilesEqual(board[x][tmpy],defaultTile))return false;
+  }
+  return true;
+}
+bool isBlankRow(int y)
+{
+  for(int tmpx=0;tmpx<boardSize;tmpx++)
+  {
+    if(!tilesEqual(board[tmpx][y],defaultTile))return false;
+  }
+  return true;
+}
+
+void doMapCSV()
+{
+  //coords in this are like math coordinates
+  
+  int startX=0;
+  while(isBlankCol(startX))startX++;
+  int endX=startX;
+  while(!isBlankCol(endX))endX++;
+  endX--;
+  
+  int startY=0;
+  while(isBlankRow(startY))startY++;
+  int endY=startY;
+  while(!isBlankRow(endY))endY++;
+  endY--;
+  
+  const int csvWidth=(endX-startX+1)*2+1;
+  const int csvHeight=(endY-startY+1)*2+1;
+  //cout<<startX<<" "<<endX<<" "<<csvWidth<<"    "<<startY<<" "<<endY<<" "<<csvHeight<<endl;
+  vector<vector<string>> csvMap(csvWidth,vector<string>(csvHeight,string("")));
+  
+  for(int x=startX,csvX=1;x<=endX;x++,csvX+=2)
+  {
+    for(int y=startY,csvY=1;y<=endY;y++,csvY+=2)
+    {
+      //cout<<x<<" "<<y<<"    "<<csvX<<" "<<csvY<<endl;
+      //if not visited, put tile as 0 and leave walls blank. any walls blank at the end will become a 0
+      if(!board[x][y].visited)
+      {
+        csvMap[csvX][csvY]="0";
+        //continue;
+      }
+      else if(board[x][y].isHole)
+      {
+        csvMap[csvX][csvY]="2";
+        continue;
+      }
+      //NEED TO KNOW ALL TILE TYPES
+      else
+      {
+        csvMap.at(csvX).at(csvY)="0"; //temporary just assume all tiles normal
+      }
+      if(x==startingCoord.first && y==startingCoord.second)csvMap.at(csvX).at(csvY)="5";
+      //NEED TO KNOW WHERE VICTIMS FOUND
+      csvMap.at(csvX).at(csvY+1)=board[x][y].open[0]?"0":"1";//temporary just assume no victims on walls
+      csvMap.at(csvX+1).at(csvY)=board[x][y].open[1]?"0":"1";
+      csvMap.at(csvX).at(csvY-1)=board[x][y].open[2]?"0":"1";
+      csvMap.at(csvX-1).at(csvY)=board[x][y].open[3]?"0":"1";
+    }
+  }
+  
+  for(int x=0;x<csvWidth;x++)
+  {
+    for(int y=0;y<csvHeight;y++)
+    {
+      if(csvMap[x][y]=="")csvMap[x][y]="0";
+    }
+  }
+  
+  for(int x=0;x<csvWidth;x+=2) //verticy is 1 if connected to a wall
+  {
+    for(int y=0;y<csvHeight;y+=2)
+    {
+      if((y+1<csvHeight&&csvMap[x][y+1]!="0") || (x+1<csvWidth&&csvMap[x+1][y]!="0") || (y-1>=0&&csvMap[x][y-1]!="0") || (x-1>=0&&csvMap[x-1][y]!="0"))
+      {
+        csvMap[x][y]="1";
+      }
+      else
+      {
+        csvMap[x][y]="0";
+      }
+    }
+  }
+  
+  
+
+  for(int i = csvHeight-1; i >= 0; i--) {
+    for(int j = 0; j < csvWidth; j++) {
+      cout<<csvMap[j][i]<<" ";
+    }
+    cout<<endl;
+  }
+  
+  string flattened = "";
+  for(int i = 0; i < csvWidth; i++) {
+    for(int j = csvHeight-1; j >= 0; j--) {
+      flattened += csvMap[i][j] + ",";
+    }
+  }
+  flattened.pop_back();
+  char *message=(char*)malloc(8 + flattened.size());
+  memcpy(message, &csvWidth, sizeof(csvWidth));
+  memcpy(&message[4], &csvHeight, sizeof(csvHeight));
+  memcpy(&message[8], flattened.c_str(), flattened.size());
+  emitter->send(message, 8 + flattened.size()); // Send map data
+  char msg = 'M'; // Send map evaluate request
+  emitter->send(&msg, sizeof(msg));
+}

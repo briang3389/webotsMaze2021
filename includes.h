@@ -2,6 +2,8 @@
 #include <queue>
 #include <stack>
 #include <cmath>
+#include <vector>
+#include <string>
 #include <webots/Robot.hpp>
 #include <webots/Motor.hpp>
 #include <webots/PositionSensor.hpp>
