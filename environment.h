@@ -391,7 +391,7 @@ bool checkVisualVictim(Camera* cam)
           
           PosX = gps->getValues()[0]*100;
           PosZ = gps->getValues()[2]*100;
-         if(top > 0.02 && top < 0.9 && mid > 0.04 && mid < 0.8 && bottom > 0.02 && bottom < 0.9)//exclude noisy info
+         if(top > 0.04 && top < 0.9 && mid > 0.05 && mid < 0.8 && bottom > 0.04 && bottom < 0.9)//exclude noisy info
           {
               double img[3] = {top, mid, bottom};
               changeMessage(PosX, PosZ, getLetter(img));
