@@ -46,7 +46,7 @@ pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
 
 
-#include "debugstuff.h"
+//#include "debugstuff.h"
 
 
 int doTimeStep()
