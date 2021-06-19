@@ -91,6 +91,18 @@ bool isBlankRow(int y)
   return true;
 }
 
+char specialTiles[boardSize][boardSize];
+char& specialTilesLoc(pair<int, int> tileCoords){
+    return specialTiles[tileCoords.first][tileCoords.second];
+}
+void fullSpecialTileSet(pair<int, int> tileCoords, char val)
+{
+  specialTiles[tileCoords.first][tileCoords.second]=val;
+  specialTiles[tileCoords.first+1][tileCoords.second]=val;
+  specialTiles[tileCoords.first][tileCoords.second+1]=val;
+  specialTiles[tileCoords.first+1][tileCoords.second+1]=val;
+}
+
 void doMapCSV()
 {
   //coords in this are like math coordinates
@@ -117,23 +129,34 @@ void doMapCSV()
     for(int y=startY,csvY=1;y<=endY;y++,csvY+=2)
     {
       //cout<<x<<" "<<y<<"    "<<csvX<<" "<<csvY<<endl;
-      //if not visited, put tile as 0 and leave walls blank. any walls blank at the end will become a 0
+      /*
       if(!board[x][y].visited)
       {
         csvMap[csvX][csvY]="0";
         //continue;
       }
+      */
+      if((x==startingCoord.first && y==startingCoord.second) || (x==startingCoord.first+1 && y==startingCoord.second) || (x==startingCoord.first && y==startingCoord.second+1) || (x==startingCoord.first+1 && y==startingCoord.second+1))
+      {
+        cout<<x<<" "<<y<<"    "<<csvX<<" "<<csvY<<endl;
+        csvMap.at(csvX).at(csvY)="5";
+      }
       else if(board[x][y].isHole)
       {
         csvMap[csvX][csvY]="2";
-        continue;
+        //continue;
       }
-      //NEED TO KNOW ALL TILE TYPES
+      else if(specialTiles[x][y]!=0)
+      {
+        char tmpchararray[2]={0};
+        tmpchararray[0]=specialTiles[x][y];
+        csvMap.at(csvX).at(csvY)=string(tmpchararray);//to_string(specialTiles[x][y]);
+      }
       else
       {
-        csvMap.at(csvX).at(csvY)="0"; //temporary just assume all tiles normal
+        csvMap.at(csvX).at(csvY)="0";
       }
-      if(x==startingCoord.first && y==startingCoord.second)csvMap.at(csvX).at(csvY)="5";
+      
       //NEED TO KNOW WHERE VICTIMS FOUND
       csvMap.at(csvX).at(csvY+1)=board[x][y].open[0]?"0":"1";//temporary just assume no victims on walls
       csvMap.at(csvX+1).at(csvY)=board[x][y].open[1]?"0":"1";
@@ -146,7 +169,7 @@ void doMapCSV()
   {
     for(int y=0;y<csvHeight;y++)
     {
-      if(csvMap[x][y]=="")csvMap[x][y]="0";
+      if(csvMap[x][y]=="")csvMap[x][y]="0";//maybe this should be 1
     }
   }
   
@@ -173,6 +196,13 @@ void doMapCSV()
     }
     cout<<endl;
   }
+  /*cout<<endl<<endl;
+  for(int i = 99; i >= 0; i--) {
+    for(int j = 0; j < 100; j++) {
+      cout<<(specialTiles[j][i]?specialTiles[j][i]:'0')<<" ";
+    }
+    cout<<endl;
+  }*/
   
   string flattened = "";
   for(int i = 0; i < csvWidth; i++) {

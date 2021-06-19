@@ -23,7 +23,7 @@ bool& visualChecking = statesArr[6];
 
 //constants
 const double motorSpeed = 5.0;
-const double stoppingConst = 100;
+const double stoppingConst = 100.0;
 
 //movement variables
 double turnTarget = 0.0;
@@ -46,7 +46,7 @@ pair<int, int> boardParentsBackup[boardSize][boardSize];
 bool traveledBackup[boardSize][boardSize];
 
 
-//#include "debugstuff.h"
+#include "debugstuff.h"
 
 
 int doTimeStep()
@@ -122,8 +122,8 @@ int main(int argc, char **argv)
       rightMotor->setVelocity(0);
       leftMotor->setVelocity(0);
       //angle=0.0;
-      while(steps.size()>0)steps.pop();//if(!doLOPstuff)
-      while(bfsQueue.size()>0)bfsQueue.pop();//if(!doLOPstuff)
+      while(steps.size()>0)steps.pop();//if(!doLOPstuff)if(!ending)
+      while(bfsQueue.size()>0)bfsQueue.pop();//if(!doLOPstuff)if(!ending)
       //change position to last visited checkpoint (or start tile)
       //loc=getCoords(); //this uses gps so manually keeping track of checkpoint locations is not necessary
       
@@ -191,23 +191,35 @@ int main(int argc, char **argv)
         if (stopping) {
             if (timer == stoppingConst) {
                 sendMessage();
-                for(int i = 0; i < 50; i++)
+                for(int i = 0; i < 50; i++) //50
                 {
                     doTimeStep();
                 }
                 boardLoc(getCoords()).victimChecked=true;
+                cout << "Done stopping!" << endl;
+                /*
                 setMotors(1.5,-1.5);
                 while((int)getAngle()!=0)
                 {
                     doTimeStep();
                 }
+                */
+                /*
+                if(getAngle()<180.0)setMotors(motorSpeed,-motorSpeed);
+                else setMotors(-motorSpeed,motorSpeed);
+                while(!(fabs(getAngle() - 0.0) < 5.0 || fabs(getAngle() - 0.0 + 360) < 1.0))
+                {
+                  doTimeStep();
+                }
                 doLOPstuff=true;
                 continue;
+                */
             }
             if (timer >= stoppingConst + 30) {
                 timer = 0;
                 setMotors(motorPrevious.first, motorPrevious.second);
                 stopping = false;
+                cout << "Done more stopping!" << endl;
             }
             timer++;
         }
@@ -238,7 +250,7 @@ int main(int argc, char **argv)
             else {
                 if (checkVisualVictim(camR) || checkVisualVictim(camL)) {
                     timer = 0;
-                    motorPrevious = make_pair(leftMotor->getVelocity(), rightMotor->getVelocity());
+                    motorPrevious = make_pair(lVel(), rVel());//make_pair(leftMotor->getVelocity(), rightMotor->getVelocity());
                     leftMotor->setVelocity(0);
                     rightMotor->setVelocity(0);
                     stopping = true;
@@ -260,14 +272,14 @@ int main(int argc, char **argv)
             else {
                 //cout << getDelta() << endl;
                 double relativeDirection = fmod((360.0 + targetAngle - getAngle()), 360.0);
-                //cout << "Angle = " << relativeDirection << endl;
+                //cout << "Angle = " << relativeDirection << ", target is " << targetAngle << endl;
                 if (relativeDirection > .2 && relativeDirection < 90.0) {
-                    rightMotor->setVelocity(min(motorMax(), rightMotor->getVelocity() - .005));
-                    leftMotor->setVelocity(min(motorMax(), leftMotor->getVelocity() + .005));
-                    setMotors(min(motorMax(), lVel() + .005), min(motorMax(), rVel() - .005));
+                    rightMotor->setVelocity(min(motorMax(), rightMotor->getVelocity() - .01));
+                    leftMotor->setVelocity(min(motorMax(), leftMotor->getVelocity() + .01));
+                    setMotors(min(motorMax(), lVel() + .01), min(motorMax(), rVel() - .01));
                 }
                 if (relativeDirection < 359.8 && relativeDirection > 270.0) {
-                    setMotors(min(motorMax(), lVel() - .005), min(motorMax(), rVel() + .005));
+                    setMotors(min(motorMax(), lVel() - .01), min(motorMax(), rVel() + .01));
                 }
                 //if (checkHeatVictim(message) || checkVisualVictim(true, message) || checkVisualVictim(false, message)) {
                 if (checkVisualVictim(camR) || checkVisualVictim(camL)) {
