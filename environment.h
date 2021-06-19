@@ -243,7 +243,7 @@ char getLetter(double Values[3])
     if(dist[4] < dist[letter])
         letter = 4;
     if(dist[5] < dist[letter])
-        letter = 4;
+        letter = 5;
     if(letter == 0){//Closest to H    
         printf("H victim\n");
         return 'H';
