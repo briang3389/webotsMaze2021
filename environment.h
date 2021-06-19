@@ -173,14 +173,6 @@ double motorMax(){
     return min(leftMotor->getMaxVelocity(), rightMotor->getMaxVelocity());
 }
 
-void placeVictim(Camera* cam, char letter)
-{
-    if(cam == robot->getCamera("rCam"))
-        boardLoc(loc).open[(direction+1) % 4] = letter;
-    else
-        boardLoc(loc).open[(direction+3) % 4] = letter;
-}
-
 const int max_value_H = 360/2;
 const int max_value = 255;
 const String window_capture_name = "Video Capture";
